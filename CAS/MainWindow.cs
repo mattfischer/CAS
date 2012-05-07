@@ -19,6 +19,7 @@ namespace CAS
         {
             InitializeComponent();
             ActiveControl = CommandBox;
+            History.Add("");
         }
 
         private void finishRender()
@@ -53,8 +54,39 @@ namespace CAS
 
         private void CommandBox_KeyDown(object sender, KeyEventArgs e)
         {
+            if (e.KeyCode == Keys.Up)
+            {
+                int line = CommandBox.GetLineFromCharIndex(CommandBox.SelectionStart);
+                if (line == 0 && HistoryIndex > 0)
+                {
+                    History[HistoryIndex] = CommandBox.Text;
+                    HistoryIndex--;
+                    CommandBox.Text = History[HistoryIndex];
+                    CommandBox.SelectionStart = History[HistoryIndex].Length;
+                    CommandBox.SelectionLength = 0;
+                    e.SuppressKeyPress = true;
+                }
+            }
+
+            if (e.KeyCode == Keys.Down)
+            {
+                int line = CommandBox.GetLineFromCharIndex(CommandBox.SelectionStart);
+                if (line == CommandBox.Lines.Length - 1 && HistoryIndex < History.Count - 1)
+                {
+                    History[HistoryIndex] = CommandBox.Text;
+                    HistoryIndex++;
+                    CommandBox.Text = History[HistoryIndex];
+                    CommandBox.SelectionStart = History[HistoryIndex].Length;
+                    CommandBox.SelectionLength = 0;
+                    e.SuppressKeyPress = true;
+                }
+            }
+
             if (e.KeyCode == Keys.Return)
             {
+                History[History.Count - 1] = CommandBox.Text;
+                History.Add("");
+                HistoryIndex = History.Count - 1;
                 if (renderThread != null)
                 {
                     renderThread.Join();
@@ -110,7 +142,12 @@ namespace CAS
                 this.Side = Side;
             }
         };
+
         List<DisplayRegion> Regions = new List<DisplayRegion>();
+
+        List<string> History = new List<string>();
+        int HistoryIndex = 0;
+
         TeXRenderer Renderer = new TeXRenderer();
         Thread renderThread = null;
     }
