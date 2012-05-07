@@ -13,6 +13,7 @@ namespace CAS
     public partial class MainWindow : Form
     {
         private delegate void FinishRender();
+        private const int BORDER = 5;
 
         public MainWindow()
         {
@@ -22,29 +23,32 @@ namespace CAS
 
         private void finishRender()
         {
+            renderThread.Join();
+            renderThread = null;
+
             DisplayRegion newRegion = Regions[Regions.Count - 1];
 
             Size size = OutputWindow.AutoScrollMinSize;
-            size.Height = newRegion.Top + newRegion.Bitmap.Height;
+            size.Height = newRegion.Top + newRegion.Bitmap.Height + BORDER;
             OutputWindow.AutoScrollMinSize = size;
             OutputWindow.Invalidate();
-            OutputWindow.AutoScrollPosition = new Point(0, OutputWindow.AutoScrollMinSize.Height - OutputWindow.Size.Height);
+            OutputWindow.AutoScrollPosition = new Point(0, size.Height - OutputWindow.Size.Height);
         }
 
         private void renderCommand(object command)
         {
-            int nextTop = 0;
+            int nextTop = BORDER;
             if (Regions.Count > 0)
             {
                 DisplayRegion lastRegion = Regions[Regions.Count - 1];
-                nextTop = lastRegion.Top + lastRegion.Bitmap.Height + 10;
+                nextTop = lastRegion.Top + lastRegion.Bitmap.Height + 2 * BORDER;
             }
 
             Bitmap bitmap = Renderer.Render((string)command);
             DisplayRegion newRegion = new DisplayRegion(nextTop, bitmap, DisplayRegion.LeftRight.Left);
             Regions.Add(newRegion);
 
-            Invoke(new FinishRender(this.finishRender));
+            BeginInvoke(new FinishRender(this.finishRender));
         }
 
         private void CommandBox_KeyDown(object sender, KeyEventArgs e)
@@ -71,10 +75,10 @@ namespace CAS
                 switch (region.Side)
                 {
                     case DisplayRegion.LeftRight.Left:
-                        x = 0;
+                        x = BORDER;
                         break;
                     case DisplayRegion.LeftRight.Right:
-                        x = OutputWindow.Size.Width - System.Windows.Forms.SystemInformation.VerticalScrollBarWidth - region.Bitmap.Width;
+                        x = OutputWindow.Size.Width - System.Windows.Forms.SystemInformation.VerticalScrollBarWidth - region.Bitmap.Width - BORDER;
                         break;
                 }
                 e.Graphics.DrawImage(region.Bitmap, new Point(x, region.Top));
