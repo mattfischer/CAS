@@ -7,7 +7,23 @@ namespace CAS
 {
     class Tokenizer
     {
-        public struct Token
+        public class TokenException : System.ApplicationException
+        {
+            public TokenException(int position, string message)
+                : base(message)
+            {
+                this.position = position;
+            }
+
+            public int Position
+            {
+                get { return position; }
+            }
+
+            int position;
+        };
+
+        public class Token
         {
             public enum Type
             {
@@ -18,6 +34,7 @@ namespace CAS
 
             Type type;
             String str;
+            int pos;
 
             public Type TokenType
             {
@@ -29,10 +46,16 @@ namespace CAS
                 get { return str; }
             }
 
-            public Token(Type type, string str)
+            public int Position
+            {
+                get { return pos; }
+            }
+
+            public Token(Type type, string str, int pos)
             {
                 this.type = type;
                 this.str = str;
+                this.pos = pos;
             }
         };
 
@@ -51,7 +74,7 @@ namespace CAS
 
             if (position == input.Length)
             {
-                return new Token(Token.Type.End, "");
+                return new Token(Token.Type.End, "<end>", position);
             }
 
             string rest = input.Substring(position);
@@ -67,8 +90,9 @@ namespace CAS
                     }
                 }
                 string str = rest.Substring(0, i);
+                Token ret = new Token(Token.Type.Number, str, position);
                 position += i;
-                return new Token(Token.Type.Number, str);
+                return ret;
             }
 
             string[] symbols = { "+", "-", "*", "/", "(", ")" };
@@ -76,20 +100,35 @@ namespace CAS
             {
                 if (rest.StartsWith(symbol))
                 {
+                    Token ret = new Token(Token.Type.Symbol, symbol, position);
                     position += symbol.Length;
-                    return new Token(Token.Type.Symbol, symbol);
+                    return ret;
                 }
             }
 
-            return new Token(Token.Type.End, "");
+            throw new TokenException(position, "Found illegal character " + rest[0]);
+        }
+
+        public Token Consume(Token.Type type, string str)
+        {
+            Token token = nextToken;
+
+            if (token.TokenType == type && token.String == str)
+            {
+                nextToken = GetNext();
+                return token;
+            }
+            else
+            {
+                return null;
+            }
         }
 
         public Token Consume()
         {
-            Token ret = nextToken;
+            Token token = nextToken;
             nextToken = GetNext();
-
-            return ret;
+            return token;
         }
 
         public Token NextToken

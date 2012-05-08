@@ -63,19 +63,34 @@ namespace CAS
                     break;
 
                 case Expression.Type.Minus:
-                    ret = texString(e.Children[0]) + "-" + texString(e.Children[1]);
+                    ret = texString(e.Children[0]) + "-";
+                    if(e.Children[1].ExpressionType == Expression.Type.Plus || e.Children[1].ExpressionType == Expression.Type.Minus)
+                    {
+                        ret += "(" + texString(e.Children[1]) + ")";
+                    }
+                    else
+                    {
+                        ret += texString(e.Children[1]);
+                    }
                     break;
 
                 case Expression.Type.Times:
-                    if(e.Children[0].ExpressionType == Expression.Type.Plus || e.Children[0].ExpressionType == Expression.Type.Minus) {
+                    if (e.Children[0].ExpressionType == Expression.Type.Plus || e.Children[0].ExpressionType == Expression.Type.Minus)
+                    {
                         ret = "(" + texString(e.Children[0]) + ")";
-                    } else {
+                    }
+                    else
+                    {
                         ret = texString(e.Children[0]);
                     }
                     ret += @"\cdot ";
-                    if(e.Children[1].ExpressionType == Expression.Type.Plus || e.Children[1].ExpressionType == Expression.Type.Minus) {
+
+                    if (e.Children[1].ExpressionType == Expression.Type.Plus || e.Children[1].ExpressionType == Expression.Type.Minus)
+                    {
                         ret += "(" + texString(e.Children[1]) + ")";
-                    } else {
+                    }
+                    else
+                    {
                         ret += texString(e.Children[1]);
                     }
                     break;

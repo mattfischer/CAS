@@ -40,7 +40,24 @@ namespace CAS
         {
             Tokenizer tokenizer = new Tokenizer((string)command);
             Parser parser = new Parser(tokenizer);
-            Expression e = parser.Parse();
+            Bitmap bitmap;
+            try
+            {
+                Expression e = parser.Parse();
+                bitmap = Renderer.Render(e);
+            }
+            catch (Parser.ParseException ex)
+            {
+                bitmap = new Bitmap(300, 50);
+                Graphics g = Graphics.FromImage(bitmap);
+                g.Clear(Color.White);
+                Font font = new Font(FontFamily.GenericSansSerif, 10);
+                Brush blackBrush = new SolidBrush(Color.Black);
+                Brush redBrush = new SolidBrush(Color.Red);
+                Size size = TextRenderer.MeasureText((string)command, font);
+                g.DrawString((string)command, font, blackBrush, new Point(0, 0));
+                g.DrawString("Error, column " + ex.Position + ": " + ex.Message, font, redBrush, new Point(0, size.Height));
+            }
 
             int nextTop = BORDER;
             if (Regions.Count > 0)
@@ -49,7 +66,6 @@ namespace CAS
                 nextTop = lastRegion.Top + lastRegion.Bitmap.Height + 2 * BORDER;
             }
 
-            Bitmap bitmap = Renderer.Render(e);
             DisplayRegion newRegion = new DisplayRegion(nextTop, bitmap, DisplayRegion.LeftRight.Left);
             Regions.Add(newRegion);
 

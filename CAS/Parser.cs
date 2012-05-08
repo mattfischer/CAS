@@ -7,6 +7,22 @@ namespace CAS
 {
     class Parser
     {
+        public class ParseException : System.ApplicationException
+        {
+            public ParseException(int position, string message)
+                : base(message)
+            {
+                this.position = position;
+            }
+
+            public int Position
+            {
+                get { return position; }
+            }
+
+            int position;
+        };
+
         public Parser(Tokenizer tokenizer)
         {
             this.tokenizer = tokenizer;
@@ -14,8 +30,20 @@ namespace CAS
 
         public Expression Parse()
         {
-            Expression e = GetExpression();
-            return e;
+            try
+            {
+                Expression e = GetExpression();
+                if (tokenizer.Consume(Tokenizer.Token.Type.End, "<end>") == null)
+                {
+                    Tokenizer.Token next = tokenizer.NextToken;
+                    throw new ParseException(next.Position, "Expected <end>, got " + next.String);
+                }
+                return e;
+            }
+            catch (Tokenizer.TokenException ex)
+            {
+                throw new ParseException(ex.Position, ex.Message);
+            }
         }
 
         Expression GetExpression()
@@ -24,13 +52,13 @@ namespace CAS
             while (tokenizer.NextToken.String == "+" || tokenizer.NextToken.String == "-")
             {
                 Tokenizer.Token token = tokenizer.Consume();
-                Expression.Type type = Expression.Type.Constant;
+                Expression.Type type;
 
                 if (token.String == "+")
                 {
                     type = Expression.Type.Plus;
                 }
-                else if (token.String == "-")
+                else
                 {
                     type = Expression.Type.Minus;
                 }
@@ -51,13 +79,13 @@ namespace CAS
             while (tokenizer.NextToken.String == "*" || tokenizer.NextToken.String == "/")
             {
                 Tokenizer.Token token = tokenizer.Consume();
-                Expression.Type type = Expression.Type.Constant;
+                Expression.Type type;
 
                 if (token.String == "*")
                 {
                     type = Expression.Type.Times;
                 }
-                else if (token.String == "/")
+                else
                 {
                     type = Expression.Type.Divide;
                 }
@@ -80,11 +108,14 @@ namespace CAS
                 return new Expression(Expression.Type.Constant, null, Int32.Parse(token.String));
             }
 
-            if (tokenizer.NextToken.String == "(")
+            if (tokenizer.Consume(Tokenizer.Token.Type.Symbol, "(") != null)
             {
-                tokenizer.Consume();
                 Expression e = GetExpression();
-                tokenizer.Consume();
+                if(tokenizer.Consume(Tokenizer.Token.Type.Symbol, ")") == null)
+                {
+                    Tokenizer.Token next = tokenizer.NextToken;
+                    throw new ParseException(next.Position, "Expected ), got " + next.String);
+                }
                 return e;
             }
 
