@@ -13,7 +13,7 @@ namespace CAS
     {
         static string TEX_PATH = @"C:\Program Files\MiKTeX 2.9\miktex\bin";
 
-        public Bitmap Render(string input)
+        public Bitmap Render(Expression expression)
         {
             string tempPath = Path.GetTempPath();
             ProcessStartInfo si = new ProcessStartInfo(Path.Combine(TEX_PATH, "tex.exe"), "cas.tex");
@@ -22,8 +22,8 @@ namespace CAS
             si.UseShellExecute = false;
             si.RedirectStandardOutput = true;
             StreamWriter texWriter = File.CreateText(Path.Combine(tempPath, "cas.tex"));
-            string texString = @"\nopagenumbers$" + input + @"$\end";
-            texWriter.Write(texString);
+            string tex = @"\nopagenumbers$" + texString(expression) + @"$\end";
+            texWriter.Write(tex);
             texWriter.Close();
 
             Process texProcess = Process.Start(si);
@@ -47,6 +47,45 @@ namespace CAS
             Bitmap bitmap = new Bitmap(bitmapPath);
 
             return bitmap;
+        }
+
+        string texString(Expression e)
+        {
+            string ret = "";
+            switch(e.ExpressionType)
+            {
+                case Expression.Type.Constant:
+                    ret = ((Int32)e.Data).ToString();
+                    break;
+
+                case Expression.Type.Plus:
+                    ret = texString(e.Children[0]) + "+" + texString(e.Children[1]);
+                    break;
+
+                case Expression.Type.Minus:
+                    ret = texString(e.Children[0]) + "-" + texString(e.Children[1]);
+                    break;
+
+                case Expression.Type.Times:
+                    if(e.Children[0].ExpressionType == Expression.Type.Plus || e.Children[0].ExpressionType == Expression.Type.Minus) {
+                        ret = "(" + texString(e.Children[0]) + ")";
+                    } else {
+                        ret = texString(e.Children[0]);
+                    }
+                    ret += @"\cdot ";
+                    if(e.Children[1].ExpressionType == Expression.Type.Plus || e.Children[1].ExpressionType == Expression.Type.Minus) {
+                        ret += "(" + texString(e.Children[1]) + ")";
+                    } else {
+                        ret += texString(e.Children[1]);
+                    }
+                    break;
+
+                case Expression.Type.Divide:
+                    ret = "{" + texString(e.Children[0]) + @"\over " + texString(e.Children[1]) + "}";
+                    break;
+            }
+
+            return ret;
         }
     }
 }

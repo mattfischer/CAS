@@ -38,6 +38,10 @@ namespace CAS
 
         private void renderCommand(object command)
         {
+            Tokenizer tokenizer = new Tokenizer((string)command);
+            Parser parser = new Parser(tokenizer);
+            Expression e = parser.Parse();
+
             int nextTop = BORDER;
             if (Regions.Count > 0)
             {
@@ -45,7 +49,7 @@ namespace CAS
                 nextTop = lastRegion.Top + lastRegion.Bitmap.Height + 2 * BORDER;
             }
 
-            Bitmap bitmap = Renderer.Render((string)command);
+            Bitmap bitmap = Renderer.Render(e);
             DisplayRegion newRegion = new DisplayRegion(nextTop, bitmap, DisplayRegion.LeftRight.Left);
             Regions.Add(newRegion);
 
