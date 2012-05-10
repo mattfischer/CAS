@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.OutputWindow = new System.Windows.Forms.Panel();
+            this.OutputPanel = new System.Windows.Forms.Panel();
             this.CommandBox = new System.Windows.Forms.TextBox();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -47,7 +47,7 @@
             // 
             // splitContainer1.Panel1
             // 
-            this.splitContainer1.Panel1.Controls.Add(this.OutputWindow);
+            this.splitContainer1.Panel1.Controls.Add(this.OutputPanel);
             // 
             // splitContainer1.Panel2
             // 
@@ -56,17 +56,18 @@
             this.splitContainer1.SplitterDistance = 214;
             this.splitContainer1.TabIndex = 0;
             // 
-            // OutputWindow
+            // OutputPanel
             // 
-            this.OutputWindow.AutoScroll = true;
-            this.OutputWindow.BackColor = System.Drawing.Color.White;
-            this.OutputWindow.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.OutputWindow.Location = new System.Drawing.Point(0, 0);
-            this.OutputWindow.Name = "OutputWindow";
-            this.OutputWindow.Size = new System.Drawing.Size(292, 214);
-            this.OutputWindow.TabIndex = 0;
-            this.OutputWindow.SizeChanged += new System.EventHandler(this.OutputWindow_SizeChanged);
-            this.OutputWindow.Paint += new System.Windows.Forms.PaintEventHandler(this.OutputWindow_Paint);
+            this.OutputPanel.AutoScroll = true;
+            this.OutputPanel.BackColor = System.Drawing.Color.White;
+            this.OutputPanel.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.OutputPanel.Location = new System.Drawing.Point(0, 0);
+            this.OutputPanel.Name = "OutputPanel";
+            this.OutputPanel.Size = new System.Drawing.Size(292, 214);
+            this.OutputPanel.TabIndex = 0;
+            this.OutputPanel.SizeChanged += new System.EventHandler(this.OutputWindow_SizeChanged);
+            this.OutputPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.OutputWindow_Paint);
+            this.OutputPanel.MouseClick += new System.Windows.Forms.MouseEventHandler(this.OutputWindow_MouseClick);
             // 
             // CommandBox
             // 
@@ -99,7 +100,7 @@
         #endregion
 
         private System.Windows.Forms.SplitContainer splitContainer1;
-        private System.Windows.Forms.Panel OutputWindow;
+        private System.Windows.Forms.Panel OutputPanel;
         private System.Windows.Forms.TextBox CommandBox;
 
 

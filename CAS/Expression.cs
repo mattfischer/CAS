@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CAS
 {
-    class Expression
+    public class Expression
     {
         public enum Type
         {
@@ -36,6 +36,25 @@ namespace CAS
             this.type = type;
             this.children = children;
             this.data = data;
+        }
+
+        public override string ToString()
+        {
+            switch (type)
+            {
+                case Type.Constant:
+                    return ((int)data).ToString();
+                case Type.Plus:
+                    return "+";
+                case Type.Minus:
+                    return "-";
+                case Type.Times:
+                    return "*";
+                case Type.Divide:
+                    return "/";
+                default:
+                    return "";
+            }
         }
 
         Type type;

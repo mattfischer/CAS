@@ -12,7 +12,7 @@ namespace CAS
 {
     public partial class MainWindow : Form
     {
-        private delegate void FinishRender();
+        private delegate void AddBitmapDelegate(Bitmap bitmap);
         private const int BORDER = 5;
 
         public MainWindow()
@@ -22,41 +22,12 @@ namespace CAS
             History.Add("");
         }
 
-        private void finishRender()
+        private void addBitmap(Bitmap bitmap)
         {
-            renderThread.Join();
-            renderThread = null;
-
-            DisplayRegion newRegion = Regions[Regions.Count - 1];
-
-            Size size = OutputWindow.AutoScrollMinSize;
-            size.Height = newRegion.Top + newRegion.Bitmap.Height + BORDER;
-            OutputWindow.AutoScrollMinSize = size;
-            OutputWindow.Invalidate();
-            OutputWindow.AutoScrollPosition = new Point(0, size.Height - OutputWindow.Size.Height);
-        }
-
-        private void renderCommand(object command)
-        {
-            Tokenizer tokenizer = new Tokenizer((string)command);
-            Parser parser = new Parser(tokenizer);
-            Bitmap bitmap;
-            try
+            if (renderThread != null)
             {
-                Expression e = parser.Parse();
-                bitmap = Renderer.Render(e);
-            }
-            catch (Parser.ParseException ex)
-            {
-                bitmap = new Bitmap(300, 50);
-                Graphics g = Graphics.FromImage(bitmap);
-                g.Clear(Color.White);
-                Font font = new Font(FontFamily.GenericSansSerif, 10);
-                Brush blackBrush = new SolidBrush(Color.Black);
-                Brush redBrush = new SolidBrush(Color.Red);
-                Size size = TextRenderer.MeasureText((string)command, font);
-                g.DrawString((string)command, font, blackBrush, new Point(0, 0));
-                g.DrawString("Error, column " + ex.Position + ": " + ex.Message, font, redBrush, new Point(0, size.Height));
+                renderThread.Join();
+                renderThread = null;
             }
 
             int nextTop = BORDER;
@@ -69,7 +40,19 @@ namespace CAS
             DisplayRegion newRegion = new DisplayRegion(nextTop, bitmap, DisplayRegion.LeftRight.Left);
             Regions.Add(newRegion);
 
-            BeginInvoke(new FinishRender(this.finishRender));
+            Size size = OutputPanel.AutoScrollMinSize;
+            size.Height = newRegion.Top + newRegion.Bitmap.Height + BORDER;
+            OutputPanel.AutoScrollMinSize = size;
+            OutputPanel.Invalidate();
+            OutputPanel.AutoScrollPosition = new Point(0, size.Height - OutputPanel.Size.Height);
+        }
+
+        private void renderCommand(object expression)
+        {
+            Bitmap bitmap = Renderer.Render((Expression)expression);
+
+            object[] args = { bitmap };
+            BeginInvoke(new AddBitmapDelegate(this.addBitmap), args);
         }
 
         private void CommandBox_KeyDown(object sender, KeyEventArgs e)
@@ -104,23 +87,49 @@ namespace CAS
 
             if (e.KeyCode == Keys.Return)
             {
-                History[History.Count - 1] = CommandBox.Text;
-                History.Add("");
-                HistoryIndex = History.Count - 1;
-                if (renderThread != null)
-                {
-                    renderThread.Join();
-                }
-                renderThread = new Thread(this.renderCommand);
-                renderThread.Start(CommandBox.Text);
+                string command = CommandBox.Text;
                 CommandBox.Text = "";
                 e.SuppressKeyPress = true;
+
+                History[History.Count - 1] = command;
+                History.Add("");
+                HistoryIndex = History.Count - 1;
+
+                Tokenizer tokenizer = new Tokenizer(command);
+                Parser parser = new Parser(tokenizer);
+                try
+                {
+                    Expression expression = parser.Parse();
+                    treeViewer.Expression = expression;
+                    treeViewer.Show();
+
+                    if (renderThread != null)
+                    {
+                        renderThread.Join();
+                    }
+                    renderThread = new Thread(this.renderCommand);
+                    renderThread.Start(expression);
+                }
+                catch (Parser.ParseException ex)
+                {
+                    Bitmap bitmap = new Bitmap(300, 50);
+                    Graphics g = Graphics.FromImage(bitmap);
+                    g.Clear(Color.White);
+                    Font font = new Font(FontFamily.GenericSansSerif, 10);
+                    Brush blackBrush = new SolidBrush(Color.Black);
+                    Brush redBrush = new SolidBrush(Color.Red);
+                    Size size = TextRenderer.MeasureText(command, font);
+                    g.DrawString(command, font, blackBrush, new Point(0, 0));
+                    g.DrawString("Error, column " + ex.Position + ": " + ex.Message, font, redBrush, new Point(0, size.Height));
+
+                    addBitmap(bitmap);
+                }
             }
         }
 
         private void OutputWindow_Paint(object sender, PaintEventArgs e)
         {
-            e.Graphics.TranslateTransform(OutputWindow.AutoScrollPosition.X, OutputWindow.AutoScrollPosition.Y);
+            e.Graphics.TranslateTransform(OutputPanel.AutoScrollPosition.X, OutputPanel.AutoScrollPosition.Y);
             foreach (DisplayRegion region in Regions)
             {
                 int x = 0;
@@ -130,7 +139,7 @@ namespace CAS
                         x = BORDER;
                         break;
                     case DisplayRegion.LeftRight.Right:
-                        x = OutputWindow.Size.Width - System.Windows.Forms.SystemInformation.VerticalScrollBarWidth - region.Bitmap.Width - BORDER;
+                        x = OutputPanel.Size.Width - System.Windows.Forms.SystemInformation.VerticalScrollBarWidth - region.Bitmap.Width - BORDER;
                         break;
                 }
                 e.Graphics.DrawImage(region.Bitmap, new Point(x, region.Top));
@@ -139,8 +148,8 @@ namespace CAS
 
         private void OutputWindow_SizeChanged(object sender, EventArgs e)
         {
-            OutputWindow.AutoScrollPosition = new Point(0, OutputWindow.AutoScrollMinSize.Height - OutputWindow.Size.Height);
-            OutputWindow.Invalidate();
+            OutputPanel.AutoScrollPosition = new Point(0, OutputPanel.AutoScrollMinSize.Height - OutputPanel.Size.Height);
+            OutputPanel.Invalidate();
         }
 
         struct DisplayRegion
@@ -170,5 +179,11 @@ namespace CAS
 
         TeXRenderer Renderer = new TeXRenderer();
         Thread renderThread = null;
+        TreeViewer treeViewer = new TreeViewer();
+
+        private void OutputWindow_MouseClick(object sender, MouseEventArgs e)
+        {
+            treeViewer.Show();
+        }
     }
 }
