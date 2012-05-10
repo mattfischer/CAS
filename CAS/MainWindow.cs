@@ -100,8 +100,9 @@ namespace CAS
                 try
                 {
                     Expression expression = parser.Parse();
-                    treeViewer.Expression = expression;
+                    treeViewer.AddExpression(expression, command);
                     treeViewer.Show();
+                    treeViewer.BringToFront();
 
                     if (renderThread != null)
                     {
@@ -184,6 +185,7 @@ namespace CAS
         private void OutputWindow_MouseClick(object sender, MouseEventArgs e)
         {
             treeViewer.Show();
+            treeViewer.BringToFront();
         }
     }
 }

@@ -31,7 +31,7 @@ namespace CAS
         static Pen EdgePen = new Pen(Color.DarkOliveGreen);
         static Pen CirclePen = new Pen(Color.DarkBlue, 2);
         static Brush CircleBrush = new SolidBrush(Color.White);
-        static Font TextFont = new Font(FontFamily.GenericSansSerif, 10);
+        static Font TextFont = new Font(FontFamily.GenericSansSerif, 12);
         static Brush TextBrush = new SolidBrush(Color.Black);
 
         public TreeViewer()
@@ -99,41 +99,48 @@ namespace CAS
 
         void layout()
         {
-            List<LayoutNode> rightmost = new List<LayoutNode>();
-            rightmost.Add(null);
-            layoutRoot = layoutExpression(expression, rightmost, 0);
-
             int width, height;
             width = 0;
-            height = (rightmost.Count - 1) * VERTICAL_SPACE + 2 * BORDER;
-            foreach (LayoutNode node in rightmost)
+            height = 0;
+            if (active != -1)
             {
-                if (node != null)
+                List<LayoutNode> rightmost = new List<LayoutNode>();
+                rightmost.Add(null);
+                layoutRoot = layoutExpression(expressions[active], rightmost, 0);
+
+
+                width = 0;
+                height = (rightmost.Count - 1) * VERTICAL_SPACE + 2 * BORDER;
+                foreach (LayoutNode node in rightmost)
                 {
-                    width = Math.Max(width, node.position.X + BORDER);
+                    if (node != null)
+                    {
+                        width = Math.Max(width, node.position.X + BORDER);
+                    }
                 }
             }
 
-            Size size = new Size(width, height);
-
-            Rectangle rect = ClientRectangle;
-            rect.Size = size;
-            Rectangle clip = SystemInformation.VirtualScreen;
-            clip.Width -= 50;
-            clip.Height -= 50;
-            rect.Intersect(clip);
-            ClientSize = rect.Size;
-
-            DisplayPanel.AutoScrollMinSize = size;
+            DisplayPanel.AutoScrollMinSize = new Size(width, height);
             DisplayPanel.Invalidate();
         }
 
-        Expression expression;
+        List<Expression> expressions = new List<Expression>();
+        int active = 0;
         LayoutNode layoutRoot = null;
-        public Expression Expression
+        public void ClearExpressions()
         {
-            get { return expression; }
-            set { expression = value; layout(); }
+            expressions.Clear();
+            SelectBox.Items.Clear();
+            active = -1;
+            Invalidate();
+        }
+
+        public void AddExpression(Expression expression, string title)
+        {
+            expressions.Add(expression);
+            SelectBox.Items.Add(title);
+            SelectBox.SelectedIndices.Clear();
+            SelectBox.SelectedIndices.Add(expressions.Count - 1);
         }
 
         void drawNode(LayoutNode node, Graphics g)
@@ -160,6 +167,19 @@ namespace CAS
             g.TranslateTransform(DisplayPanel.AutoScrollPosition.X, DisplayPanel.AutoScrollPosition.Y);
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
             drawNode(layoutRoot, g);
+        }
+
+        private void SelectBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (SelectBox.SelectedIndices.Count > 0)
+            {
+                active = SelectBox.SelectedIndices[0];
+            }
+            else
+            {
+                active = -1;
+            }
+            layout();
         }
     }
 }
