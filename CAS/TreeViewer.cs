@@ -166,7 +166,10 @@ namespace CAS
 
             g.TranslateTransform(DisplayPanel.AutoScrollPosition.X, DisplayPanel.AutoScrollPosition.Y);
             g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-            drawNode(layoutRoot, g);
+            if (layoutRoot != null)
+            {
+                drawNode(layoutRoot, g);
+            }
         }
 
         private void SelectBox_SelectedIndexChanged(object sender, EventArgs e)

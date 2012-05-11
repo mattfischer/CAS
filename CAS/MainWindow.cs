@@ -12,7 +12,9 @@ namespace CAS
 {
     public partial class MainWindow : Form
     {
-        private delegate void AddBitmapDelegate(Bitmap bitmap);
+        private delegate void AddBitmapDelegate(Bitmap bitmap, DisplayRegion.LeftRight leftRight);
+        private delegate void AddTreeDelegate(Expression expression, string title);
+
         private const int BORDER = 5;
 
         public MainWindow()
@@ -22,7 +24,7 @@ namespace CAS
             History.Add("");
         }
 
-        private void addBitmap(Bitmap bitmap)
+        private void addBitmap(Bitmap bitmap, DisplayRegion.LeftRight leftRight)
         {
             if (renderThread != null)
             {
@@ -37,7 +39,7 @@ namespace CAS
                 nextTop = lastRegion.Top + lastRegion.Bitmap.Height + 2 * BORDER;
             }
 
-            DisplayRegion newRegion = new DisplayRegion(nextTop, bitmap, DisplayRegion.LeftRight.Left);
+            DisplayRegion newRegion = new DisplayRegion(nextTop, bitmap, leftRight);
             Regions.Add(newRegion);
 
             Size size = OutputPanel.AutoScrollMinSize;
@@ -47,12 +49,34 @@ namespace CAS
             OutputPanel.AutoScrollPosition = new Point(0, size.Height - OutputPanel.Size.Height);
         }
 
-        private void renderCommand(object expression)
+        private void addTree(Expression expression, string title)
         {
-            Bitmap bitmap = Renderer.Render((Expression)expression);
+            treeViewer.AddExpression(expression, title);
+        }
 
-            object[] args = { bitmap };
-            BeginInvoke(new AddBitmapDelegate(this.addBitmap), args);
+        private void renderCommand(object obj)
+        {
+            Expression expression = (Expression)obj;
+
+            object[] args = { expression, "Start" };
+            BeginInvoke(new AddTreeDelegate(this.addTree), args);
+
+            Bitmap bitmap = Renderer.Render(expression);
+
+            object[] args2 = { bitmap, DisplayRegion.LeftRight.Left };
+            BeginInvoke(new AddBitmapDelegate(this.addBitmap), args2);
+
+            Expression result = Evaluate.Eval(expression, logExpression);
+            bitmap = Renderer.Render(result);
+
+            object[] args3 = { bitmap, DisplayRegion.LeftRight.Right };
+            BeginInvoke(new AddBitmapDelegate(this.addBitmap), args3);
+        }
+
+        void logExpression(Expression expression, string title)
+        {
+            object[] args = { expression, title };
+            BeginInvoke(new AddTreeDelegate(this.addTree), args);
         }
 
         private void CommandBox_KeyDown(object sender, KeyEventArgs e)
@@ -100,7 +124,7 @@ namespace CAS
                 try
                 {
                     Expression expression = parser.Parse();
-                    treeViewer.AddExpression(expression, command);
+                    treeViewer.ClearExpressions();
                     treeViewer.Show();
                     treeViewer.BringToFront();
 
@@ -123,7 +147,7 @@ namespace CAS
                     g.DrawString(command, font, blackBrush, new Point(0, 0));
                     g.DrawString("Error, column " + ex.Position + ": " + ex.Message, font, redBrush, new Point(0, size.Height));
 
-                    addBitmap(bitmap);
+                    addBitmap(bitmap, DisplayRegion.LeftRight.Left);
                 }
             }
         }
