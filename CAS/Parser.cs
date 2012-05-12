@@ -64,10 +64,7 @@ namespace CAS
                 }
 
                 Expression e = GetTerm();
-                List<Expression> children = new List<Expression>();
-                children.Add(ret);
-                children.Add(e);
-                ret = new Expression(type, children);
+                ret = new Expression(type, ret, e);
             }
 
             return ret;
@@ -91,10 +88,7 @@ namespace CAS
                 }
 
                 Expression e = GetFactor();
-                List<Expression> children = new List<Expression>();
-                children.Add(ret);
-                children.Add(e);
-                ret = new Expression(type, children);
+                ret = new Expression(type, ret, e);
             }
 
             return ret;
@@ -105,7 +99,7 @@ namespace CAS
             if(tokenizer.NextToken.TokenType == Tokenizer.Token.Type.Number)
             {
                 Tokenizer.Token token = tokenizer.Consume();
-                return new Expression(Expression.Type.Constant, null, Int32.Parse(token.String));
+                return new Expression(Expression.Type.Constant, Int32.Parse(token.String));
             }
 
             if (tokenizer.Consume(Tokenizer.Token.Type.Symbol, "(") != null)

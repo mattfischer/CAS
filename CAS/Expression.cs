@@ -31,7 +31,28 @@ namespace CAS
             get { return data; }
         }
 
-        public Expression(Type type, List<Expression> children = null, Object data = null)
+        public Expression(Type type, Object data = null)
+        {
+            this.type = type;
+            this.children = new List<Expression>();
+            this.data = data;
+        }
+
+        public Expression(Type type, params Expression[] children)
+        {
+            this.type = type;
+            this.children = new List<Expression>(children);
+            this.data = null;
+        }
+
+        public Expression(Type type, Object data, params Expression[] children)
+        {
+            this.type = type;
+            this.children = new List<Expression>(children);
+            this.data = data;
+        }
+
+        public Expression(Type type, List<Expression> children, Object data = null)
         {
             this.type = type;
             this.children = children;
