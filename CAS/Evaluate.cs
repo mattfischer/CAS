@@ -84,7 +84,7 @@ namespace CAS
                             }
                         }
 
-                        if (ret.Children.Count == 1)
+                        if (newRet.Children.Count == 1)
                         {
                             ret = newRet.Children[0];
                         }

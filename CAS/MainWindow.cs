@@ -12,84 +12,112 @@ namespace CAS
 {
     public partial class MainWindow : Form
     {
-        private delegate void AddBitmapDelegate(Bitmap bitmap, DisplayRegion.LeftRight leftRight);
-        private delegate void AddTreeDelegate(Expression expression, string title);
+        delegate void UpdateOutputDelegate();
 
-        private const int BORDER = 5;
+        const int BORDER = 5;
 
         public MainWindow()
         {
             InitializeComponent();
             ActiveControl = CommandBox;
-            History.Add("");
+
+            history.Add("");
+            renderThread = new Thread(renderMain);
+            renderThread.Start();
         }
 
-        private void addBitmap(Bitmap bitmap, DisplayRegion.LeftRight leftRight)
+        void renderMain()
         {
-            if (renderThread != null)
+            while (true)
             {
-                renderThread.Join();
-                renderThread = null;
+                renderEvent.WaitOne();
+                
+                while(renderQueue.Count > 0)
+                {
+                    DisplayRegion region = renderQueue.First();
+                    renderQueue.RemoveAt(0);
+
+                    region.Bitmap = renderer.Render(region.Expression);
+                    if (regions.Count > 0)
+                    {
+                        region.Top = regions.Last().Top + regions.Last().Bitmap.Size.Height + 2 * BORDER;
+                    }
+                    else
+                    {
+                        region.Top = BORDER;
+                    }
+                    regions.Add(region);
+                    BeginInvoke(new UpdateOutputDelegate(updateOutput));
+                }
             }
+        }
 
-            int nextTop = BORDER;
-            if (Regions.Count > 0)
-            {
-                DisplayRegion lastRegion = Regions[Regions.Count - 1];
-                nextTop = lastRegion.Top + lastRegion.Bitmap.Height + 2 * BORDER;
-            }
-
-            DisplayRegion newRegion = new DisplayRegion(nextTop, bitmap, leftRight);
-            Regions.Add(newRegion);
-
+        void updateOutput()
+        {
+            DisplayRegion region = regions.Last();
             Size size = OutputPanel.AutoScrollMinSize;
-            size.Height = newRegion.Top + newRegion.Bitmap.Height + BORDER;
+            size.Height = region.Top + region.Bitmap.Height + BORDER;
             OutputPanel.AutoScrollMinSize = size;
             OutputPanel.Invalidate();
             OutputPanel.AutoScrollPosition = new Point(0, size.Height - OutputPanel.Size.Height);
         }
 
-        private void addTree(Expression expression, string title)
+
+        void addTree(Expression expression, string title)
         {
             treeViewer.AddExpression(expression, title);
         }
 
-        private void renderCommand(object obj)
+        void runCommand(string command)
         {
-            Expression expression = (Expression)obj;
+            Tokenizer tokenizer = new Tokenizer(command);
+            Parser parser = new Parser(tokenizer);
+            try
+            {
+                Expression expression = parser.Parse();
+                treeViewer.ClearExpressions();
+                treeViewer.Show();
+                treeViewer.BringToFront();
 
-            object[] args = { expression, "Start" };
-            BeginInvoke(new AddTreeDelegate(this.addTree), args);
+                treeViewer.AddExpression(expression, "Start");
+                DisplayRegion region = new DisplayRegion(0, expression, DisplayRegion.LeftRight.Left);
+                renderQueue.Add(region);
 
-            Bitmap bitmap = Renderer.Render(expression);
+                Expression result = Evaluate.Eval(expression, addTree);
 
-            object[] args2 = { bitmap, DisplayRegion.LeftRight.Left };
-            BeginInvoke(new AddBitmapDelegate(this.addBitmap), args2);
+                region = new DisplayRegion(0, result, DisplayRegion.LeftRight.Right);
+                renderQueue.Add(region);
+                renderEvent.Set();
+            }
+            catch (Parser.ParseException ex)
+            {
+                Bitmap bitmap = new Bitmap(300, 50);
+                Graphics g = Graphics.FromImage(bitmap);
+                g.Clear(Color.White);
+                Font font = new Font(FontFamily.GenericSansSerif, 10);
+                Brush blackBrush = new SolidBrush(Color.Black);
+                Brush redBrush = new SolidBrush(Color.Red);
+                Size size = TextRenderer.MeasureText(command, font);
+                g.DrawString(command, font, blackBrush, new Point(0, 0));
+                g.DrawString("Error, column " + ex.Position + ": " + ex.Message, font, redBrush, new Point(0, size.Height));
 
-            Expression result = Evaluate.Eval(expression, logExpression);
-            bitmap = Renderer.Render(result);
-
-            object[] args3 = { bitmap, DisplayRegion.LeftRight.Right };
-            BeginInvoke(new AddBitmapDelegate(this.addBitmap), args3);
+                DisplayRegion region = new DisplayRegion(0, bitmap, DisplayRegion.LeftRight.Left);
+                regions.Add(region);
+                updateOutput();
+            }
         }
 
-        void logExpression(Expression expression, string title)
-        {
-            object[] args = { expression, title };
-            BeginInvoke(new AddTreeDelegate(this.addTree), args);
-        }
-
-        private void CommandBox_KeyDown(object sender, KeyEventArgs e)
+        void CommandBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.KeyCode == Keys.Up)
             {
                 int line = CommandBox.GetLineFromCharIndex(CommandBox.SelectionStart);
-                if (line == 0 && HistoryIndex > 0)
+                if (line == 0 && historyIndex > 0)
                 {
-                    History[HistoryIndex] = CommandBox.Text;
-                    HistoryIndex--;
-                    CommandBox.Text = History[HistoryIndex];
-                    CommandBox.SelectionStart = History[HistoryIndex].Length;
+                    history[historyIndex] = CommandBox.Text;
+                    historyIndex--;
+                    CommandBox.Text = history[historyIndex];
+                    CommandBox.SelectionStart = history[historyIndex].Length;
                     CommandBox.SelectionLength = 0;
                     e.SuppressKeyPress = true;
                 }
@@ -98,12 +126,12 @@ namespace CAS
             if (e.KeyCode == Keys.Down)
             {
                 int line = CommandBox.GetLineFromCharIndex(CommandBox.SelectionStart);
-                if (line == CommandBox.Lines.Length - 1 && HistoryIndex < History.Count - 1)
+                if (line == CommandBox.Lines.Length - 1 && historyIndex < history.Count - 1)
                 {
-                    History[HistoryIndex] = CommandBox.Text;
-                    HistoryIndex++;
-                    CommandBox.Text = History[HistoryIndex];
-                    CommandBox.SelectionStart = History[HistoryIndex].Length;
+                    history[historyIndex] = CommandBox.Text;
+                    historyIndex++;
+                    CommandBox.Text = history[historyIndex];
+                    CommandBox.SelectionStart = history[historyIndex].Length;
                     CommandBox.SelectionLength = 0;
                     e.SuppressKeyPress = true;
                 }
@@ -115,47 +143,18 @@ namespace CAS
                 CommandBox.Text = "";
                 e.SuppressKeyPress = true;
 
-                History[History.Count - 1] = command;
-                History.Add("");
-                HistoryIndex = History.Count - 1;
+                history[history.Count - 1] = command;
+                history.Add("");
+                historyIndex = history.Count - 1;
 
-                Tokenizer tokenizer = new Tokenizer(command);
-                Parser parser = new Parser(tokenizer);
-                try
-                {
-                    Expression expression = parser.Parse();
-                    treeViewer.ClearExpressions();
-                    treeViewer.Show();
-                    treeViewer.BringToFront();
-
-                    if (renderThread != null)
-                    {
-                        renderThread.Join();
-                    }
-                    renderThread = new Thread(this.renderCommand);
-                    renderThread.Start(expression);
-                }
-                catch (Parser.ParseException ex)
-                {
-                    Bitmap bitmap = new Bitmap(300, 50);
-                    Graphics g = Graphics.FromImage(bitmap);
-                    g.Clear(Color.White);
-                    Font font = new Font(FontFamily.GenericSansSerif, 10);
-                    Brush blackBrush = new SolidBrush(Color.Black);
-                    Brush redBrush = new SolidBrush(Color.Red);
-                    Size size = TextRenderer.MeasureText(command, font);
-                    g.DrawString(command, font, blackBrush, new Point(0, 0));
-                    g.DrawString("Error, column " + ex.Position + ": " + ex.Message, font, redBrush, new Point(0, size.Height));
-
-                    addBitmap(bitmap, DisplayRegion.LeftRight.Left);
-                }
+                runCommand(command);
             }
         }
 
-        private void OutputWindow_Paint(object sender, PaintEventArgs e)
+        void OutputWindow_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.TranslateTransform(OutputPanel.AutoScrollPosition.X, OutputPanel.AutoScrollPosition.Y);
-            foreach (DisplayRegion region in Regions)
+            foreach (DisplayRegion region in regions)
             {
                 int x = 0;
                 switch (region.Side)
@@ -171,16 +170,23 @@ namespace CAS
             }
         }
 
-        private void OutputWindow_SizeChanged(object sender, EventArgs e)
+        void OutputWindow_SizeChanged(object sender, EventArgs e)
         {
             OutputPanel.AutoScrollPosition = new Point(0, OutputPanel.AutoScrollMinSize.Height - OutputPanel.Size.Height);
             OutputPanel.Invalidate();
+        }
+
+        void OutputWindow_MouseClick(object sender, MouseEventArgs e)
+        {
+            treeViewer.Show();
+            treeViewer.BringToFront();
         }
 
         struct DisplayRegion
         {
             public int Top;
             public Bitmap Bitmap;
+            public Expression Expression;
             public enum LeftRight
             {
                 Left,
@@ -189,27 +195,33 @@ namespace CAS
 
             public LeftRight Side;
 
+            public DisplayRegion(int Top, Expression Expression, LeftRight Side)
+            {
+                this.Top = Top;
+                this.Expression = Expression;
+                this.Side = Side;
+                this.Bitmap = null;
+            }
+
             public DisplayRegion(int Top, Bitmap Bitmap, LeftRight Side)
             {
                 this.Top = Top;
-                this.Bitmap = Bitmap;
+                this.Expression = null;
                 this.Side = Side;
+                this.Bitmap = Bitmap;
             }
         };
 
-        List<DisplayRegion> Regions = new List<DisplayRegion>();
+        List<DisplayRegion> regions = new List<DisplayRegion>();
 
-        List<string> History = new List<string>();
-        int HistoryIndex = 0;
+        List<string> history = new List<string>();
+        int historyIndex = 0;
 
-        TeXRenderer Renderer = new TeXRenderer();
+        TeXRenderer renderer = new TeXRenderer();
         Thread renderThread = null;
-        TreeViewer treeViewer = new TreeViewer();
+        AutoResetEvent renderEvent = new AutoResetEvent(false);
+        List<DisplayRegion> renderQueue = new List<DisplayRegion>();
 
-        private void OutputWindow_MouseClick(object sender, MouseEventArgs e)
-        {
-            treeViewer.Show();
-            treeViewer.BringToFront();
-        }
+        TreeViewer treeViewer = new TreeViewer();
     }
 }
