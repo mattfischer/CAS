@@ -13,7 +13,8 @@ namespace CAS
             Plus,
             Minus,
             Times,
-            Divide
+            Divide,
+            Negative
         };
 
         public Type ExpressionType
@@ -68,6 +69,7 @@ namespace CAS
                 case Type.Plus:
                     return "+";
                 case Type.Minus:
+                case Type.Negative:
                     return "-";
                 case Type.Times:
                     return "*";

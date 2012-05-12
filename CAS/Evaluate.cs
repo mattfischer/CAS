@@ -11,6 +11,9 @@ namespace CAS
 
         public static Expression Eval(Expression ex, LogExpressionDelegate log)
         {
+            ex = removeMinus(ex);
+            log(ex, "RemoveMinus");
+
             ex = flatten(ex, true);
             log(ex, "Flatten");
 
@@ -21,6 +24,34 @@ namespace CAS
             log(ex, "Fold");
 
             return ex;
+        }
+
+        static Expression removeMinus(Expression expression)
+        {
+            Expression ret = new Expression(expression.ExpressionType, expression.Data);
+            foreach (Expression child in expression.Children)
+            {
+                ret.Children.Add(removeMinus(child));
+            }
+
+            Expression minusOne = new Expression(Expression.Type.Constant, -1);
+            switch (ret.ExpressionType)
+            {
+                case Expression.Type.Minus:
+                    {
+                        Expression times = new Expression(Expression.Type.Times, minusOne, ret.Children[1]);
+                        ret = new Expression(Expression.Type.Plus, ret.Children[0], times);
+                        break;
+                    }
+
+                case Expression.Type.Negative:
+                    {
+                        ret = new Expression(Expression.Type.Times, minusOne, ret.Children[0]);
+                        break;
+                    }
+            }
+
+            return ret;
         }
 
         static Expression flatten(Expression expression, bool recursive)
@@ -309,6 +340,9 @@ namespace CAS
 
         static int greatestCommonDivisor(int a, int b)
         {
+            a = Math.Abs(a);
+            b = Math.Abs(b);
+
             if (a == 0)
             {
                 return b;

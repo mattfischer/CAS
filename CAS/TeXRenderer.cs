@@ -98,6 +98,17 @@ namespace CAS
                 case Expression.Type.Divide:
                     ret = "{" + texString(e.Children[0]) + @"\over " + texString(e.Children[1]) + "}";
                     break;
+
+                case Expression.Type.Negative:
+                    if (e.Children[0].ExpressionType == Expression.Type.Plus || e.Children[0].ExpressionType == Expression.Type.Minus)
+                    {
+                        ret = "-(" + texString(e.Children[0]) + ")";
+                    }
+                    else
+                    {
+                        ret = "-" + texString(e.Children[0]);
+                    }
+                    break;
             }
 
             return ret;

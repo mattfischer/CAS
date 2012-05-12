@@ -102,6 +102,12 @@ namespace CAS
                 return new Expression(Expression.Type.Constant, Int32.Parse(token.String));
             }
 
+            if (tokenizer.Consume(Tokenizer.Token.Type.Symbol, "-") != null)
+            {
+                Expression e = GetFactor();
+                return new Expression(Expression.Type.Negative, e);
+            }
+
             if (tokenizer.Consume(Tokenizer.Token.Type.Symbol, "(") != null)
             {
                 Expression e = GetExpression();
