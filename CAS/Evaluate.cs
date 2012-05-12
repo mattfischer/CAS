@@ -95,36 +95,6 @@ namespace CAS
 
                         break;
                     }
-
-                case Expression.Type.Divide:
-                    {
-                        Expression num = new Expression(Expression.Type.Times);
-                        Expression den = new Expression(Expression.Type.Times);
-                        if (ret.Children[0].ExpressionType == Expression.Type.Divide)
-                        {
-                            num.Children.Add(ret.Children[0].Children[0]);
-                            den.Children.Add(ret.Children[0].Children[1]);
-                        }
-                        else
-                        {
-                            num.Children.Add(ret.Children[0]);
-                        }
-
-                        if (ret.Children[1].ExpressionType == Expression.Type.Divide)
-                        {
-                            num.Children.Add(ret.Children[1].Children[1]);
-                            den.Children.Add(ret.Children[1].Children[0]);
-                        }
-                        else
-                        {
-                            den.Children.Add(ret.Children[1]);
-                        }
-
-                        num = flatten(num, false);
-                        den = flatten(den, false);
-                        ret = new Expression(Expression.Type.Divide, num, den);
-                        break;
-                    }
             }
 
             return ret;
@@ -236,8 +206,34 @@ namespace CAS
                     }
 
                 case Expression.Type.Divide:
-                    ret = flatten(ret, false);
-                    break;
+                    {
+                        Expression num = new Expression(Expression.Type.Times);
+                        Expression den = new Expression(Expression.Type.Times);
+                        if (ret.Children[0].ExpressionType == Expression.Type.Divide)
+                        {
+                            num.Children.Add(ret.Children[0].Children[0]);
+                            den.Children.Add(ret.Children[0].Children[1]);
+                        }
+                        else
+                        {
+                            num.Children.Add(ret.Children[0]);
+                        }
+
+                        if (ret.Children[1].ExpressionType == Expression.Type.Divide)
+                        {
+                            num.Children.Add(ret.Children[1].Children[1]);
+                            den.Children.Add(ret.Children[1].Children[0]);
+                        }
+                        else
+                        {
+                            den.Children.Add(ret.Children[1]);
+                        }
+
+                        num = flatten(num, false);
+                        den = flatten(den, false);
+                        ret = new Expression(Expression.Type.Divide, num, den);
+                        break;
+                    }
             }
 
             return ret;
