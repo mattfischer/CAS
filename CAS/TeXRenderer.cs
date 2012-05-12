@@ -54,10 +54,6 @@ namespace CAS
             string ret = "";
             switch(e.ExpressionType)
             {
-                case Expression.Type.Constant:
-                    ret = ((Int32)e.Data).ToString();
-                    break;
-
                 case Expression.Type.Plus:
                     ret = texString(e.Children[0]) + "+" + texString(e.Children[1]);
                     break;
@@ -108,6 +104,10 @@ namespace CAS
                     {
                         ret = "-" + texString(e.Children[0]);
                     }
+                    break;
+
+                default:
+                    ret = e.Data.ToString();
                     break;
             }
 

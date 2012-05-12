@@ -28,6 +28,7 @@ namespace CAS
             public enum Type
             {
                 Number,
+                Identifier,
                 Symbol,
                 End
             };
@@ -79,18 +80,24 @@ namespace CAS
 
             string rest = input.Substring(position);
 
-            if (rest[0] >= '0' && rest[0] <= '9')
+            if (Char.IsDigit(rest[0]))
             {
                 int i;
-                for (i = 0; i < rest.Length; i++)
-                {
-                    if (rest[i] < '0' || rest[i] > '9')
-                    {
-                        break;
-                    }
-                }
+                for (i = 0; i < rest.Length && Char.IsDigit(rest[i]); i++) {}
+
                 string str = rest.Substring(0, i);
                 Token ret = new Token(Token.Type.Number, str, position);
+                position += i;
+                return ret;
+            }
+
+            if(Char.IsLetter(rest[0]))
+            {
+                int i;
+                for (i = 0; i < rest.Length && Char.IsLetterOrDigit(rest[i]); i++) {}
+
+                string str = rest.Substring(0, i);
+                Token ret = new Token(Token.Type.Identifier, str, position);
                 position += i;
                 return ret;
             }

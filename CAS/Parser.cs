@@ -96,30 +96,37 @@ namespace CAS
 
         Expression GetFactor()
         {
-            if(tokenizer.NextToken.TokenType == Tokenizer.Token.Type.Number)
+            Tokenizer.Token token = tokenizer.Consume();
+
+            switch (token.TokenType)
             {
-                Tokenizer.Token token = tokenizer.Consume();
-                return new Expression(Expression.Type.Constant, Int32.Parse(token.String));
+                case Tokenizer.Token.Type.Number:
+                    return new Expression(Expression.Type.Constant, Int32.Parse(token.String));
+
+                case Tokenizer.Token.Type.Identifier:
+                    return new Expression(Expression.Type.Variable, token.String);
+
+                case Tokenizer.Token.Type.Symbol:
+                    if (token.String == "-")
+                    {
+                        Expression e = GetFactor();
+                        return new Expression(Expression.Type.Negative, e);
+                    }
+
+                    if (token.String == "(")
+                    {
+                        Expression e = GetExpression();
+                        token = tokenizer.Consume();
+                        if (token.String != ")")
+                        {
+                            throw new ParseException(token.Position, "Expected ), got " + token.String);
+                        }
+                        return e;
+                    }
+                    break;
             }
 
-            if (tokenizer.Consume(Tokenizer.Token.Type.Symbol, "-") != null)
-            {
-                Expression e = GetFactor();
-                return new Expression(Expression.Type.Negative, e);
-            }
-
-            if (tokenizer.Consume(Tokenizer.Token.Type.Symbol, "(") != null)
-            {
-                Expression e = GetExpression();
-                if(tokenizer.Consume(Tokenizer.Token.Type.Symbol, ")") == null)
-                {
-                    Tokenizer.Token next = tokenizer.NextToken;
-                    throw new ParseException(next.Position, "Expected ), got " + next.String);
-                }
-                return e;
-            }
-
-            return null;
+            throw new ParseException(token.Position, "Unexpected token " + token.String);
         }
 
         Tokenizer tokenizer;

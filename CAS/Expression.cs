@@ -10,6 +10,7 @@ namespace CAS
         public enum Type
         {
             Constant,
+            Variable,
             Plus,
             Minus,
             Times,
@@ -46,26 +47,17 @@ namespace CAS
             this.data = null;
         }
 
-        public Expression(Type type, Object data, params Expression[] children)
-        {
-            this.type = type;
-            this.children = new List<Expression>(children);
-            this.data = data;
-        }
-
-        public Expression(Type type, List<Expression> children, Object data = null)
+        public Expression(Type type, List<Expression> children)
         {
             this.type = type;
             this.children = children;
-            this.data = data;
+            this.data = null;
         }
 
         public override string ToString()
         {
             switch (type)
             {
-                case Type.Constant:
-                    return ((int)data).ToString();
                 case Type.Plus:
                     return "+";
                 case Type.Minus:
@@ -76,7 +68,7 @@ namespace CAS
                 case Type.Divide:
                     return "/";
                 default:
-                    return "";
+                    return data.ToString();
             }
         }
 

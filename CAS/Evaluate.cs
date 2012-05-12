@@ -264,7 +264,10 @@ namespace CAS
                                 newRet.Children.Add(child);
                             }
                         }
-                        newRet.Children.Add(new Expression(Expression.Type.Constant, result));
+                        if (result != 0 || newRet.Children.Count == 0)
+                        {
+                            newRet.Children.Add(new Expression(Expression.Type.Constant, result));
+                        }
 
                         if (newRet.Children.Count == 1)
                         {
@@ -293,15 +296,26 @@ namespace CAS
                                 newRet.Children.Add(child);
                             }
                         }
-                        newRet.Children.Add(new Expression(Expression.Type.Constant, result));
 
-                        if (newRet.Children.Count == 1)
+                        if (result == 0)
                         {
-                            ret = newRet.Children[0];
+                            ret = new Expression(Expression.Type.Constant, result);
                         }
                         else
                         {
-                            ret = newRet;
+                            if (result != 1 || newRet.Children.Count == 0)
+                            {
+                                newRet.Children.Insert(0, new Expression(Expression.Type.Constant, result));
+                            }
+
+                            if (newRet.Children.Count == 1)
+                            {
+                                ret = newRet.Children[0];
+                            }
+                            else
+                            {
+                                ret = newRet;
+                            }
                         }
                         break;
                     }
