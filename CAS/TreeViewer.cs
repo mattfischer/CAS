@@ -78,7 +78,7 @@ namespace CAS
                     children.Add(childNode);
                 }
 
-                x = (children[0].position.X + children[children.Count - 1].position.X) / 2;
+                x = (children.First().position.X + children.Last().position.X) / 2;
             }
 
             LayoutNode node = new LayoutNode(expression, children, new Point(x, y));
