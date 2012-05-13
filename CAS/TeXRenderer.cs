@@ -55,7 +55,18 @@ namespace CAS
             switch(e.ExpressionType)
             {
                 case Expression.Type.Plus:
-                    ret = texString(e.Children[0]) + "+" + texString(e.Children[1]);
+                    {
+                        bool first = true;
+                        foreach (Expression child in e.Children)
+                        {
+                            if (!first)
+                            {
+                                ret += "+";
+                            }
+                            ret += texString(child);
+                            first = false;
+                        }
+                    }
                     break;
 
                 case Expression.Type.Minus:
@@ -71,25 +82,30 @@ namespace CAS
                     break;
 
                 case Expression.Type.Times:
-                    if (e.Children[0].ExpressionType == Expression.Type.Plus || e.Children[0].ExpressionType == Expression.Type.Minus)
                     {
-                        ret = "(" + texString(e.Children[0]) + ")";
-                    }
-                    else
-                    {
-                        ret = texString(e.Children[0]);
-                    }
-                    ret += @"\cdot ";
+                        bool first = true;
+                        foreach (Expression child in e.Children)
+                        {
+                            if (!first)
+                            {
+                                ret += @"\cdot ";
+                            }
 
-                    if (e.Children[1].ExpressionType == Expression.Type.Plus || e.Children[1].ExpressionType == Expression.Type.Minus)
-                    {
-                        ret += "(" + texString(e.Children[1]) + ")";
+                            switch (child.ExpressionType)
+                            {
+                                case Expression.Type.Plus:
+                                case Expression.Type.Minus:
+                                    ret += "(" + texString(child) + ")";
+                                    break;
+
+                                default:
+                                    ret += texString(child);
+                                    break;
+                            }
+                            first = false;
+                        }
+                        break;
                     }
-                    else
-                    {
-                        ret += texString(e.Children[1]);
-                    }
-                    break;
 
                 case Expression.Type.Divide:
                     ret = "{" + texString(e.Children[0]) + @"\over " + texString(e.Children[1]) + "}";
