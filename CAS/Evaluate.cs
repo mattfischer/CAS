@@ -20,6 +20,9 @@ namespace CAS
             ex = commonDenominator(ex);
             log(ex, "Common Denominator");
 
+            ex = expand(ex);
+            log(ex, "Expand");
+
             ex = fold(ex);
             log(ex, "Fold");
 
@@ -343,6 +346,55 @@ namespace CAS
 
                         break;
                     }
+            }
+
+            return ret;
+        }
+
+        static Expression expand(Expression expression)
+        {
+            Expression ret = new Expression(expression.ExpressionType, expression.Data);
+            foreach (Expression child in expression.Children)
+            {
+                ret.Children.Add(expand(child));
+            }
+
+            if (ret.ExpressionType == Expression.Type.Times)
+            {
+                Expression plus = new Expression(Expression.Type.Plus);
+                foreach (Expression child in ret.Children)
+                {
+                    Expression factor;
+
+                    if (child.ExpressionType == Expression.Type.Plus)
+                    {
+                        factor = child;
+                    }
+                    else
+                    {
+                        factor = new Expression(Expression.Type.Plus, child);
+                    }
+
+                    Expression newPlus = new Expression(Expression.Type.Plus);
+                    foreach (Expression term in factor.Children)
+                    {
+                        if (plus.Children.Count == 0)
+                        {
+                            newPlus.Children.Add(term);
+                        }
+                        else
+                        {
+                            foreach (Expression oldTerm in plus.Children)
+                            {
+                                Expression times = new Expression(Expression.Type.Times, oldTerm, term);
+                                times = flatten(times, false);
+                                newPlus.Children.Add(times);
+                            }
+                        }
+                    }
+                    plus = newPlus;
+                }
+                ret = flatten(plus, false);
             }
 
             return ret;
