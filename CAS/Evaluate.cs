@@ -14,7 +14,7 @@ namespace CAS
             ex = removeMinus(ex);
             log(ex, "RemoveMinus");
 
-            ex = flatten(ex, true);
+            ex = flatten(ex);
             log(ex, "Flatten");
 
             ex = commonDenominator(ex);
@@ -57,47 +57,20 @@ namespace CAS
             return ret;
         }
 
-        static Expression flatten(Expression expression, bool recursive)
+        static Expression flatten(Expression expression)
         {
-            Expression ret = expression;
-
-            if(recursive) {
-                ret = new Expression(expression.ExpressionType, expression.Data);
-                foreach (Expression child in expression.Children)
-                {
-                    ret.Children.Add(flatten(child, recursive));
-                }
+            Expression ret = new Expression(expression.ExpressionType, expression.Data);
+            foreach (Expression child in expression.Children)
+            {
+                ret.Children.Add(flatten(child));
             }
 
             switch (ret.ExpressionType)
             {
                 case Expression.Type.Plus:
                 case Expression.Type.Times:
-                    {
-                        Expression newRet = new Expression(ret.ExpressionType);
-                        foreach (Expression child in ret.Children)
-                        {
-                            if (child.ExpressionType == ret.ExpressionType)
-                            {
-                                newRet.Children.AddRange(child.Children);
-                            }
-                            else
-                            {
-                                newRet.Children.Add(child);
-                            }
-                        }
-
-                        if (newRet.Children.Count == 1)
-                        {
-                            ret = newRet.Children[0];
-                        }
-                        else
-                        {
-                            ret = newRet;
-                        }
-
-                        break;
-                    }
+                    ret = flattenNode(ret);
+                    break;
             }
 
             return ret;
@@ -115,126 +88,46 @@ namespace CAS
             {
                 case Expression.Type.Plus:
                     {
-                        Expression num = new Expression(Expression.Type.Plus);
-                        Expression den = new Expression(Expression.Type.Times);
+                        Expression num = null;
+                        Expression den = null;
                         foreach (Expression child in ret.Children)
                         {
-                            Expression childNum;
-                            Expression childDen;
-
-                            if (child.ExpressionType == Expression.Type.Divide)
+                            if (num == null)
                             {
-                                childNum = child.Children[0];
-                                childDen = child.Children[1];
+                                num = numerator(child);
                             }
                             else
                             {
-                                childNum = child;
-                                childDen = null;
+                                num = add(multiply(denominator(child), num), multiply(den, numerator(child)));
                             }
-
-                            if (childDen != null)
-                            {
-                                Expression newNum = new Expression(Expression.Type.Plus);
-                                foreach (Expression numChild in num.Children)
-                                {
-                                    Expression times = new Expression(Expression.Type.Times, childDen, numChild);
-                                    times = flatten(times, false);
-                                    newNum.Children.Add(times);
-                                }
-
-                                num = newNum;
-                            }
-
-                            Expression newTerm;
-
-                            if (den.Children.Count > 0)
-                            {
-                                newTerm = new Expression(Expression.Type.Times, den, childNum);
-                                newTerm = flatten(newTerm, false);
-                            }
-                            else
-                            {
-                                newTerm = childNum;
-                            }
-
-                            num.Children.Add(newTerm);
-
-                            if (childDen != null)
-                            {
-                                den.Children.Add(childDen);
-                            }
+                            den = multiply(den, denominator(child));
                         }
 
-                        if (den.Children.Count > 0)
-                        {
-                            num = flatten(num, false);
-                            den = flatten(den, false);
-                            ret = new Expression(Expression.Type.Divide, num, den);
-                        }
-                        else
-                        {
-                            ret = flatten(num, false);
-                        }
+                        ret = divide(num, den);
                         break;
                     }
 
                 case Expression.Type.Times:
                     {
-                        Expression num = new Expression(Expression.Type.Times);
-                        Expression den = new Expression(Expression.Type.Times);
+                        Expression num = null;
+                        Expression den = null;
 
                         foreach (Expression child in ret.Children)
                         {
-                            if (child.ExpressionType == Expression.Type.Divide)
-                            {
-                                num.Children.Add(child.Children[0]);
-                                den.Children.Add(child.Children[1]);
-                            } else {
-                                num.Children.Add(child);
-                            }
+                            num = multiply(num, numerator(child));
+                            den = multiply(den, denominator(child));
                         }
 
-                        if (den.Children.Count > 0)
-                        {
-                            num = flatten(num, false);
-                            den = flatten(den, false);
-                            ret = new Expression(Expression.Type.Divide, num, den);
-                        }
-                        else
-                        {
-                            ret = flatten(num, false);
-                        }
+                        ret = divide(num, den);
                         break;
                     }
 
                 case Expression.Type.Divide:
                     {
-                        Expression num = new Expression(Expression.Type.Times);
-                        Expression den = new Expression(Expression.Type.Times);
-                        if (ret.Children[0].ExpressionType == Expression.Type.Divide)
-                        {
-                            num.Children.Add(ret.Children[0].Children[0]);
-                            den.Children.Add(ret.Children[0].Children[1]);
-                        }
-                        else
-                        {
-                            num.Children.Add(ret.Children[0]);
-                        }
+                        Expression num = multiply(numerator(ret.Children[0]), denominator(ret.Children[1]));
+                        Expression den = multiply(denominator(ret.Children[0]), numerator(ret.Children[1]));
 
-                        if (ret.Children[1].ExpressionType == Expression.Type.Divide)
-                        {
-                            num.Children.Add(ret.Children[1].Children[1]);
-                            den.Children.Add(ret.Children[1].Children[0]);
-                        }
-                        else
-                        {
-                            den.Children.Add(ret.Children[1]);
-                        }
-
-                        num = flatten(num, false);
-                        den = flatten(den, false);
-                        ret = new Expression(Expression.Type.Divide, num, den);
+                        ret = divide(num, den);
                         break;
                     }
             }
@@ -254,7 +147,7 @@ namespace CAS
             {
                 case Expression.Type.Plus:
                     {
-                        Expression newRet = new Expression(Expression.Type.Plus);
+                        Expression newRet = null;
                         int result = 0;
                         foreach (Expression child in ret.Children)
                         {
@@ -264,29 +157,22 @@ namespace CAS
                             }
                             else
                             {
-                                newRet.Children.Add(child);
+                                newRet = add(newRet, child);
                             }
                         }
-                        if (result != 0 || newRet.Children.Count == 0)
+                        if (result != 0 || newRet == null)
                         {
-                            newRet.Children.Add(new Expression(Expression.Type.Constant, result));
+                            newRet = add(newRet, new Expression(Expression.Type.Constant, result));
                         }
 
-                        if (newRet.Children.Count == 1)
-                        {
-                            ret = newRet.Children[0];
-                        }
-                        else
-                        {
-                            ret = newRet;
-                        }
+                        ret = newRet;
 
                         break;
                     }
 
                 case Expression.Type.Times:
                     {
-                        Expression newRet = new Expression(Expression.Type.Times);
+                        Expression newRet = null;
                         int result = 1;
                         foreach (Expression child in ret.Children)
                         {
@@ -296,7 +182,7 @@ namespace CAS
                             }
                             else
                             {
-                                newRet.Children.Add(child);
+                                newRet = multiply(newRet, child);
                             }
                         }
 
@@ -306,19 +192,12 @@ namespace CAS
                         }
                         else
                         {
-                            if (result != 1 || newRet.Children.Count == 0)
+                            if (result != 1 || newRet == null)
                             {
-                                newRet.Children.Insert(0, new Expression(Expression.Type.Constant, result));
+                                newRet = multiply(new Expression(Expression.Type.Constant, result), newRet);
                             }
 
-                            if (newRet.Children.Count == 1)
-                            {
-                                ret = newRet.Children[0];
-                            }
-                            else
-                            {
-                                ret = newRet;
-                            }
+                            ret = newRet;
                         }
                         break;
                     }
@@ -359,42 +238,142 @@ namespace CAS
                 ret.Children.Add(expand(child));
             }
 
-            if (ret.ExpressionType == Expression.Type.Times)
+            switch (ret.ExpressionType)
             {
-                Expression plus = new Expression(Expression.Type.Plus);
-                foreach (Expression child in ret.Children)
-                {
-                    Expression factor;
+                case Expression.Type.Plus:
+                    ret = flattenNode(ret);
+                    break;
 
-                    if (child.ExpressionType == Expression.Type.Plus)
+                case Expression.Type.Times:
                     {
-                        factor = child;
-                    }
-                    else
-                    {
-                        factor = new Expression(Expression.Type.Plus, child);
-                    }
-
-                    Expression newPlus = new Expression(Expression.Type.Plus);
-                    foreach (Expression term in factor.Children)
-                    {
-                        if (plus.Children.Count == 0)
+                        Expression plus = null;
+                        foreach (Expression child in ret.Children)
                         {
-                            newPlus.Children.Add(term);
-                        }
-                        else
-                        {
-                            foreach (Expression oldTerm in plus.Children)
+                            Expression newPlus = null;
+                            foreach (Expression term in terms(child))
                             {
-                                Expression times = new Expression(Expression.Type.Times, oldTerm, term);
-                                times = flatten(times, false);
-                                newPlus.Children.Add(times);
+                                if (plus == null)
+                                {
+                                    newPlus = add(newPlus, term);
+                                }
+                                else
+                                {
+                                    foreach (Expression oldTerm in terms(plus))
+                                    {
+                                        newPlus = add(newPlus, multiply(oldTerm, term));
+                                    }
+                                }
                             }
+                            plus = newPlus;
                         }
+                        ret = plus;
+                        break;
                     }
-                    plus = newPlus;
+            }
+
+            return ret;
+        }
+
+        static Expression add(params Expression[] expressions)
+        {
+            Expression plus = new Expression(Expression.Type.Plus);
+            foreach (Expression child in expressions)
+            {
+                if (child != null)
+                {
+                    plus.Children.Add(child);
                 }
-                ret = flatten(plus, false);
+            }
+
+            return flattenNode(plus);
+        }
+
+        static Expression multiply(params Expression[] expressions)
+        {
+            Expression plus = new Expression(Expression.Type.Times);
+            foreach (Expression child in expressions)
+            {
+                if (child != null)
+                {
+                    plus.Children.Add(child);
+                }
+            }
+
+            return flattenNode(plus);
+        }
+
+        static Expression divide(Expression num, Expression den)
+        {
+            if (den != null)
+            {
+                return new Expression(Expression.Type.Divide, num, den);
+            }
+            else
+            {
+                return num;
+            }
+        }
+
+        static Expression numerator(Expression expression)
+        {
+            if (expression.ExpressionType == Expression.Type.Divide)
+            {
+                return expression.Children[0];
+            }
+            else
+            {
+                return expression;
+            }
+        }
+
+        static Expression denominator(Expression expression)
+        {
+            if (expression.ExpressionType == Expression.Type.Divide)
+            {
+                return expression.Children[1];
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        static List<Expression> terms(Expression expression)
+        {
+            if (expression.ExpressionType == Expression.Type.Plus)
+            {
+                return expression.Children;
+            }
+            else
+            {
+                List<Expression> list = new List<Expression>();
+                list.Add(expression);
+                return list;
+            }
+        }
+
+        static Expression flattenNode(Expression expression)
+        {
+            Expression ret = new Expression(expression.ExpressionType);
+            foreach (Expression child in expression.Children)
+            {
+                if (child.ExpressionType == ret.ExpressionType)
+                {
+                    ret.Children.AddRange(child.Children);
+                }
+                else
+                {
+                    ret.Children.Add(child);
+                }
+            }
+
+            if (ret.Children.Count == 0)
+            {
+                ret = null;
+            }
+            else if (ret.Children.Count == 1)
+            {
+                ret = ret.Children[0];
             }
 
             return ret;
