@@ -64,7 +64,7 @@ namespace CAS
 
             x = BORDER;
             y = BORDER + depth * VERTICAL_SPACE;
-            if (expression.Children.Count > 0)
+            if (expression.Children != null)
             {
                 if (rightmost.Count == depth + 1)
                 {

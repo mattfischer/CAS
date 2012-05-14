@@ -23,7 +23,7 @@ namespace CAS
             get { return type; }
         }
 
-        public List<Expression> Children
+        public Expression[] Children
         {
             get { return children; }
         }
@@ -36,21 +36,35 @@ namespace CAS
         public Expression(Type type, Object data = null)
         {
             this.type = type;
-            this.children = new List<Expression>();
+            this.children = null;
+            this.data = data;
+        }
+
+        public Expression(Type type, Object data, params Expression[] children)
+        {
+            this.type = type;
+            if (children.Length > 0)
+            {
+                this.children = children;
+            }
+            else
+            {
+                this.children = null;
+            }
             this.data = data;
         }
 
         public Expression(Type type, params Expression[] children)
         {
             this.type = type;
-            this.children = new List<Expression>(children);
-            this.data = null;
-        }
-
-        public Expression(Type type, List<Expression> children)
-        {
-            this.type = type;
-            this.children = children;
+            if (children.Length > 0)
+            {
+                this.children = children;
+            }
+            else
+            {
+                this.children = null;
+            }
             this.data = null;
         }
 
@@ -73,7 +87,7 @@ namespace CAS
         }
 
         Type type;
-        List<Expression> children;
+        Expression[] children;
         Object data;
     }
 }

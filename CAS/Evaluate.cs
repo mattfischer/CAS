@@ -8,6 +8,7 @@ namespace CAS
     class Evaluate
     {
         public delegate void LogExpressionDelegate(Expression expression, string title);
+        delegate Expression ExpressionOperationDelegate(Expression expression);
 
         public static Expression Eval(Expression ex, LogExpressionDelegate log)
         {
@@ -31,27 +32,17 @@ namespace CAS
 
         static Expression removeMinus(Expression expression)
         {
-            Expression ret = new Expression(expression.ExpressionType, expression.Data);
-            foreach (Expression child in expression.Children)
-            {
-                ret.Children.Add(removeMinus(child));
-            }
+            Expression ret = recurse(expression, removeMinus);
 
-            Expression minusOne = new Expression(Expression.Type.Constant, -1);
             switch (ret.ExpressionType)
             {
                 case Expression.Type.Minus:
-                    {
-                        Expression times = new Expression(Expression.Type.Times, minusOne, ret.Children[1]);
-                        ret = new Expression(Expression.Type.Plus, ret.Children[0], times);
-                        break;
-                    }
+                    ret = add(ret.Children[0], multiply(constant(-1), ret.Children[1]));
+                    break;
 
                 case Expression.Type.Negative:
-                    {
-                        ret = new Expression(Expression.Type.Times, minusOne, ret.Children[0]);
-                        break;
-                    }
+                    ret = multiply(constant(-1), ret.Children[0]);
+                    break;
             }
 
             return ret;
@@ -59,11 +50,7 @@ namespace CAS
 
         static Expression flatten(Expression expression)
         {
-            Expression ret = new Expression(expression.ExpressionType, expression.Data);
-            foreach (Expression child in expression.Children)
-            {
-                ret.Children.Add(flatten(child));
-            }
+            Expression ret = recurse(expression, flatten);
 
             switch (ret.ExpressionType)
             {
@@ -78,11 +65,7 @@ namespace CAS
 
         static Expression commonDenominator(Expression expression)
         {
-            Expression ret = new Expression(expression.ExpressionType, expression.Data);
-            foreach (Expression child in expression.Children)
-            {
-                ret.Children.Add(commonDenominator(child));
-            }
+            Expression ret = recurse(expression, commonDenominator);
 
             switch (ret.ExpressionType)
             {
@@ -124,8 +107,8 @@ namespace CAS
 
                 case Expression.Type.Divide:
                     {
-                        Expression num = multiply(numerator(ret.Children[0]), denominator(ret.Children[1]));
-                        Expression den = multiply(denominator(ret.Children[0]), numerator(ret.Children[1]));
+                        Expression num = multiply(numerator(numerator(ret)), denominator(denominator(ret)));
+                        Expression den = multiply(denominator(numerator(ret)), numerator(denominator(ret)));
 
                         ret = divide(num, den);
                         break;
@@ -137,11 +120,7 @@ namespace CAS
 
         static Expression fold(Expression expression)
         {
-            Expression ret = new Expression(expression.ExpressionType, expression.Data);
-            foreach(Expression child in expression.Children)
-            {
-                ret.Children.Add(fold(child));
-            }
+            Expression ret = recurse(expression, fold);
 
             switch (ret.ExpressionType)
             {
@@ -151,9 +130,9 @@ namespace CAS
                         int result = 0;
                         foreach (Expression child in ret.Children)
                         {
-                            if (child.ExpressionType == Expression.Type.Constant)
+                            if (isConstant(child))
                             {
-                                result += (int)child.Data;
+                                result += constantValue(child);
                             }
                             else
                             {
@@ -162,7 +141,7 @@ namespace CAS
                         }
                         if (result != 0 || newRet == null)
                         {
-                            newRet = add(newRet, new Expression(Expression.Type.Constant, result));
+                            newRet = add(newRet, constant(result));
                         }
 
                         ret = newRet;
@@ -176,9 +155,9 @@ namespace CAS
                         int result = 1;
                         foreach (Expression child in ret.Children)
                         {
-                            if (child.ExpressionType == Expression.Type.Constant)
+                            if (isConstant(child))
                             {
-                                result *= (int)child.Data;
+                                result *= constantValue(child);
                             }
                             else
                             {
@@ -188,13 +167,13 @@ namespace CAS
 
                         if (result == 0)
                         {
-                            ret = new Expression(Expression.Type.Constant, result);
+                            ret = constant(0);
                         }
                         else
                         {
                             if (result != 1 || newRet == null)
                             {
-                                newRet = multiply(new Expression(Expression.Type.Constant, result), newRet);
+                                newRet = multiply(constant(result), newRet);
                             }
 
                             ret = newRet;
@@ -204,23 +183,24 @@ namespace CAS
 
                 case Expression.Type.Divide:
                     {
-                        if (ret.Children[0].ExpressionType == Expression.Type.Constant && ret.Children[1].ExpressionType == Expression.Type.Constant)
+                        if (isConstant(numerator(ret)) && isConstant(denominator(ret)))
                         {
-                            int num = (int)ret.Children[0].Data;
-                            int den = (int)ret.Children[1].Data;
+                            int num = constantValue(numerator(ret));
+                            int den = constantValue(denominator(ret));
                             int gcd = greatestCommonDivisor(num, den);
                             num /= gcd;
                             den /= gcd;
-                            ret = new Expression(ret.ExpressionType, new Expression(Expression.Type.Constant, num), new Expression(Expression.Type.Constant, den));
+
+                            ret = divide(constant(num), constant(den));
                         }
 
-                        if (ret.Children[0].ExpressionType == Expression.Type.Constant && (int)ret.Children[0].Data == 0)
+                        if (isConstant(numerator(ret)) && constantValue(numerator(ret)) == 0)
                         {
-                            ret = ret.Children[0];
+                            ret = constant(0);
                         }
-                        else if (ret.Children[1].ExpressionType == Expression.Type.Constant && (int)ret.Children[1].Data == 1)
+                        else if (isConstant(denominator(ret)) && constantValue(denominator(ret)) == 1)
                         {
-                            ret = ret.Children[0];
+                            ret = numerator(ret);
                         }
 
                         break;
@@ -232,11 +212,7 @@ namespace CAS
 
         static Expression expand(Expression expression)
         {
-            Expression ret = new Expression(expression.ExpressionType, expression.Data);
-            foreach (Expression child in expression.Children)
-            {
-                ret.Children.Add(expand(child));
-            }
+            Expression ret = recurse(expression, expand);
 
             switch (ret.ExpressionType)
             {
@@ -276,30 +252,26 @@ namespace CAS
 
         static Expression add(params Expression[] expressions)
         {
-            Expression plus = new Expression(Expression.Type.Plus);
-            foreach (Expression child in expressions)
-            {
-                if (child != null)
-                {
-                    plus.Children.Add(child);
-                }
-            }
-
-            return flattenNode(plus);
+            return makeOp(Expression.Type.Plus, expressions);
         }
 
         static Expression multiply(params Expression[] expressions)
         {
-            Expression plus = new Expression(Expression.Type.Times);
+            return makeOp(Expression.Type.Times, expressions);
+        }
+
+        static Expression makeOp(Expression.Type type, params Expression[] expressions)
+        {
+            List<Expression> children = new List<Expression>();
             foreach (Expression child in expressions)
             {
                 if (child != null)
                 {
-                    plus.Children.Add(child);
+                    children.Add(child);
                 }
             }
 
-            return flattenNode(plus);
+            return flattenNode(new Expression(type, children.ToArray()));
         }
 
         static Expression divide(Expression num, Expression den)
@@ -338,7 +310,7 @@ namespace CAS
             }
         }
 
-        static List<Expression> terms(Expression expression)
+        static Expression[] terms(Expression expression)
         {
             if (expression.ExpressionType == Expression.Type.Plus)
             {
@@ -346,37 +318,69 @@ namespace CAS
             }
             else
             {
-                List<Expression> list = new List<Expression>();
-                list.Add(expression);
-                return list;
+                return new Expression[] { expression };
             }
         }
 
         static Expression flattenNode(Expression expression)
         {
-            Expression ret = new Expression(expression.ExpressionType);
-            foreach (Expression child in expression.Children)
+            List<Expression> children = new List<Expression>();
+            if (expression.Children != null)
             {
-                if (child.ExpressionType == ret.ExpressionType)
+                foreach (Expression child in expression.Children)
                 {
-                    ret.Children.AddRange(child.Children);
-                }
-                else
-                {
-                    ret.Children.Add(child);
+                    if (child.ExpressionType == expression.ExpressionType)
+                    {
+                        children.AddRange(child.Children);
+                    }
+                    else
+                    {
+                        children.Add(child);
+                    }
                 }
             }
 
-            if (ret.Children.Count == 0)
+            if (children.Count == 0)
             {
-                ret = null;
+                return null;
             }
-            else if (ret.Children.Count == 1)
+            else if (children.Count == 1)
             {
-                ret = ret.Children[0];
+                return children[0];
+            }
+            else
+            {
+                return new Expression(expression.ExpressionType, children.ToArray());
+            }
+        }
+
+        static Expression constant(int value)
+        {
+            return new Expression(Expression.Type.Constant, value);
+        }
+
+        static bool isConstant(Expression expression)
+        {
+            return expression.ExpressionType == Expression.Type.Constant;
+        }
+
+        static int constantValue(Expression expression)
+        {
+            return (int)expression.Data;
+        }
+
+        static Expression recurse(Expression expression, ExpressionOperationDelegate func)
+        {
+            List<Expression> children = new List<Expression>();
+            if (expression.Children != null)
+            {
+                foreach (Expression child in expression.Children)
+                {
+                    children.Add(func(child));
+                }
             }
 
-            return ret;
+            return new Expression(expression.ExpressionType, expression.Data, children.ToArray());
         }
 
         static int greatestCommonDivisor(int a, int b)
