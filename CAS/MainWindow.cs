@@ -31,7 +31,12 @@ namespace CAS
             while (true)
             {
                 renderEvent.WaitOne();
-                
+
+                if (exitRenderThread)
+                {
+                    break;
+                }
+
                 while(renderQueue.Count > 0)
                 {
                     DisplayRegion region = renderQueue.First();
@@ -221,7 +226,15 @@ namespace CAS
         Thread renderThread = null;
         AutoResetEvent renderEvent = new AutoResetEvent(false);
         List<DisplayRegion> renderQueue = new List<DisplayRegion>();
+        bool exitRenderThread = false;
 
         TreeViewer treeViewer = new TreeViewer();
+
+        private void MainWindow_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            exitRenderThread = true;
+            renderEvent.Set();
+            renderThread.Join();
+        }
     }
 }

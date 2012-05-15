@@ -88,6 +88,7 @@
             this.Controls.Add(this.splitContainer1);
             this.Name = "MainWindow";
             this.Text = "CAS Window";
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.MainWindow_FormClosed);
             this.splitContainer1.Panel1.ResumeLayout(false);
             this.splitContainer1.Panel2.ResumeLayout(false);
             this.splitContainer1.Panel2.PerformLayout();
