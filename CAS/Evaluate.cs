@@ -12,19 +12,19 @@ namespace CAS
 
         public static Expression Eval(Expression ex, LogExpressionDelegate log)
         {
-            ex = removeMinus(ex);
+            ex = recurse(ex, removeMinus);
             log(ex, "RemoveMinus");
 
-            ex = flatten(ex);
+            ex = recurse(ex, flatten);
             log(ex, "Flatten");
 
-            ex = commonDenominator(ex);
+            ex = recurse(ex, commonDenominator);
             log(ex, "Common Denominator");
 
-            ex = expand(ex);
+            ex = recurse(ex, expand);
             log(ex, "Expand");
 
-            ex = fold(ex);
+            ex = recurse(ex, fold);
             log(ex, "Fold");
 
             return ex;
@@ -32,7 +32,7 @@ namespace CAS
 
         static Expression removeMinus(Expression expression)
         {
-            Expression ret = recurse(expression, removeMinus);
+            Expression ret = expression;
 
             switch (ret.ExpressionType)
             {
@@ -50,14 +50,43 @@ namespace CAS
 
         static Expression flatten(Expression expression)
         {
-            Expression ret = recurse(expression, flatten);
+            Expression ret = expression;
 
             switch (ret.ExpressionType)
             {
                 case Expression.Type.Plus:
                 case Expression.Type.Times:
-                    ret = flattenNode(ret);
-                    break;
+                    {
+                        List<Expression> children = new List<Expression>();
+                        if (ret.Children != null)
+                        {
+                            foreach (Expression child in ret.Children)
+                            {
+                                if (child.ExpressionType == ret.ExpressionType)
+                                {
+                                    children.AddRange(child.Children);
+                                }
+                                else
+                                {
+                                    children.Add(child);
+                                }
+                            }
+                        }
+
+                        if (children.Count == 0)
+                        {
+                            ret = null;
+                        }
+                        else if (children.Count == 1)
+                        {
+                            ret = children[0];
+                        }
+                        else
+                        {
+                            ret = new Expression(ret.ExpressionType, children.ToArray());
+                        }
+                        break;
+                    }
             }
 
             return ret;
@@ -65,7 +94,7 @@ namespace CAS
 
         static Expression commonDenominator(Expression expression)
         {
-            Expression ret = recurse(expression, commonDenominator);
+            Expression ret = expression;
 
             switch (ret.ExpressionType)
             {
@@ -120,7 +149,7 @@ namespace CAS
 
         static Expression fold(Expression expression)
         {
-            Expression ret = recurse(expression, fold);
+            Expression ret = expression;
 
             switch (ret.ExpressionType)
             {
@@ -212,12 +241,12 @@ namespace CAS
 
         static Expression expand(Expression expression)
         {
-            Expression ret = recurse(expression, expand);
+            Expression ret = expression;
 
             switch (ret.ExpressionType)
             {
                 case Expression.Type.Plus:
-                    ret = flattenNode(ret);
+                    ret = flatten(ret);
                     break;
 
                 case Expression.Type.Times:
@@ -271,7 +300,7 @@ namespace CAS
                 }
             }
 
-            return flattenNode(new Expression(type, children.ToArray()));
+            return flatten(new Expression(type, children.ToArray()));
         }
 
         static Expression divide(Expression num, Expression den)
@@ -322,38 +351,6 @@ namespace CAS
             }
         }
 
-        static Expression flattenNode(Expression expression)
-        {
-            List<Expression> children = new List<Expression>();
-            if (expression.Children != null)
-            {
-                foreach (Expression child in expression.Children)
-                {
-                    if (child.ExpressionType == expression.ExpressionType)
-                    {
-                        children.AddRange(child.Children);
-                    }
-                    else
-                    {
-                        children.Add(child);
-                    }
-                }
-            }
-
-            if (children.Count == 0)
-            {
-                return null;
-            }
-            else if (children.Count == 1)
-            {
-                return children[0];
-            }
-            else
-            {
-                return new Expression(expression.ExpressionType, children.ToArray());
-            }
-        }
-
         static Expression constant(int value)
         {
             return new Expression(Expression.Type.Constant, value);
@@ -376,11 +373,13 @@ namespace CAS
             {
                 foreach (Expression child in expression.Children)
                 {
-                    children.Add(func(child));
+                    children.Add(recurse(child, func));
                 }
             }
 
-            return new Expression(expression.ExpressionType, expression.Data, children.ToArray());
+            Expression ret = new Expression(expression.ExpressionType, expression.Data, children.ToArray());
+            ret = func(ret);
+            return ret;
         }
 
         static int greatestCommonDivisor(int a, int b)
