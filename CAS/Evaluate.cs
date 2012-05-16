@@ -7,28 +7,20 @@ namespace CAS
 {
     class Evaluate
     {
-        public delegate void LogExpressionDelegate(Expression expression, string title);
+        public delegate void LogExpressionDelegate(Expression oldExp, Expression newExp, string title);
         delegate Expression ExpressionOperationDelegate(Expression expression);
 
-        public static Expression Eval(Expression ex, LogExpressionDelegate log)
+        static LogExpressionDelegate log = null;
+        public static Expression Eval(Expression ex, LogExpressionDelegate lg)
         {
-            ex = recurse(ex, removeMinus);
-            log(ex, "RemoveMinus");
+            log = lg;
 
-            ex = recurse(ex, flatten);
-            log(ex, "Flatten");
-
-            ex = recurse(ex, rationalize);
-            log(ex, "Rationalize");
-
-            ex = recurse(ex, expand);
-            log(ex, "Expand");
-
-            ex = recurse(ex, fold);
-            log(ex, "Fold");
-
-            ex = recurse(ex, collect);
-            log(ex, "Collect");
+            ex = recurse(ex, removeMinus, "RemoveMinus");
+            ex = recurse(ex, flatten, "Flatten");
+            ex = recurse(ex, rationalize, "Rationalize");
+            ex = recurse(ex, expand, "Expand");
+            ex = recurse(ex, fold, "Fold");
+            ex = recurse(ex, collect, "Collect");
 
             return ex;
         }
@@ -258,7 +250,7 @@ namespace CAS
                             Expression coefficient = coeffTerm[0];
                             Expression term = coeffTerm[1];
 
-                            term = recurse(term, sort);
+                            term = recurse(term, sort, "Sort");
                             if (dict.ContainsKey(term))
                             {
                                 dict[term] = add(dict[term], coefficient);
@@ -286,7 +278,7 @@ namespace CAS
                             Expression fact = factor(child);
                             Expression exp = exponent(child);
 
-                            fact = recurse(fact, sort);
+                            fact = recurse(fact, sort, "Sort");
                             if (dict.ContainsKey(fact))
                             {
                                 dict[fact] = add(dict[fact], exp);
@@ -505,19 +497,22 @@ namespace CAS
             return new Expression[] { coefficient, term };
         }
 
-        static Expression recurse(Expression expression, ExpressionOperationDelegate func)
+        static Expression recurse(Expression expression, ExpressionOperationDelegate func, string logTitle)
         {
             List<Expression> children = new List<Expression>();
             if (expression.Children != null)
             {
                 foreach (Expression child in expression.Children)
                 {
-                    children.Add(recurse(child, func));
+                    Expression newChild = recurse(child, func, logTitle);
+                    log(child, newChild, logTitle);
+                    children.Add(newChild);
                 }
             }
 
             Expression ret = new Expression(expression.ExpressionType, expression.Data, children.ToArray());
             ret = func(ret);
+            log(expression, ret, logTitle);
             return ret;
         }
 

@@ -68,9 +68,55 @@ namespace CAS
         }
 
 
-        void addTree(Expression expression, string title)
+        void logReplace(Expression oldExp, Expression newExp, string title)
         {
-            treeViewer.AddExpression(expression, title);
+            if (ReferenceEquals(oldExp, topExpression))
+            {
+                topExpression = newExp;
+                expressionReplacements.Clear();
+                if (topExpression != lastExpression)
+                {
+                    treeViewer.AddExpression(topExpression, title);
+                    lastExpression = topExpression;
+                }
+            }
+            else
+            {
+                if (expressionReplacements.ContainsKey(oldExp))
+                {
+                    expressionReplacements[oldExp] = newExp;
+                }
+                else
+                {
+                    expressionReplacements.Add(oldExp, newExp);
+                }
+
+                Expression exp = constructExpression(topExpression);
+                if (exp != lastExpression)
+                {
+                    treeViewer.AddExpression(exp, title);
+                    lastExpression = exp;
+                }
+            }
+        }
+
+        Expression constructExpression(Expression expression)
+        {
+            if (expressionReplacements.ContainsKey(expression))
+            {
+                return expressionReplacements[expression];
+            }
+
+            List<Expression> children = new List<Expression>();
+            if (expression.Children != null)
+            {
+                foreach (Expression child in expression.Children)
+                {
+                    children.Add(constructExpression(child));
+                }
+            }
+
+            return new Expression(expression.ExpressionType, expression.Data, children.ToArray());
         }
 
         void runCommand(string command)
@@ -84,11 +130,13 @@ namespace CAS
                 treeViewer.Show();
                 treeViewer.BringToFront();
 
+                topExpression = expression;
+                lastExpression = expression;
                 treeViewer.AddExpression(expression, "Start");
                 DisplayRegion region = new DisplayRegion(0, expression, DisplayRegion.LeftRight.Left);
                 renderQueue.Add(region);
 
-                Expression result = Evaluate.Eval(expression, addTree);
+                Expression result = Evaluate.Eval(expression, logReplace);
 
                 region = new DisplayRegion(0, result, DisplayRegion.LeftRight.Right);
                 renderQueue.Add(region);
@@ -229,6 +277,23 @@ namespace CAS
         bool exitRenderThread = false;
 
         TreeViewer treeViewer = new TreeViewer();
+
+        Expression topExpression = null;
+        Expression lastExpression = null;
+        class Comparer : IEqualityComparer<Expression>
+        {
+            public bool Equals(Expression a, Expression b)
+            {
+                return ReferenceEquals(a, b);
+            }
+
+            public int GetHashCode(Expression a)
+            {
+                return a.GetHashCode();
+            }
+        }
+
+        Dictionary<Expression, Expression> expressionReplacements = new Dictionary<Expression, Expression>(new Comparer());
 
         private void MainWindow_FormClosed(object sender, FormClosedEventArgs e)
         {
