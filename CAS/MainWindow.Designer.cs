@@ -31,6 +31,7 @@
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.OutputPanel = new System.Windows.Forms.Panel();
             this.CommandBox = new System.Windows.Forms.TextBox();
+            this.showIntermediates = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -51,9 +52,10 @@
             // 
             // splitContainer1.Panel2
             // 
+            this.splitContainer1.Panel2.Controls.Add(this.showIntermediates);
             this.splitContainer1.Panel2.Controls.Add(this.CommandBox);
-            this.splitContainer1.Size = new System.Drawing.Size(292, 266);
-            this.splitContainer1.SplitterDistance = 214;
+            this.splitContainer1.Size = new System.Drawing.Size(292, 298);
+            this.splitContainer1.SplitterDistance = 215;
             this.splitContainer1.TabIndex = 0;
             // 
             // OutputPanel
@@ -63,7 +65,7 @@
             this.OutputPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.OutputPanel.Location = new System.Drawing.Point(0, 0);
             this.OutputPanel.Name = "OutputPanel";
-            this.OutputPanel.Size = new System.Drawing.Size(292, 214);
+            this.OutputPanel.Size = new System.Drawing.Size(292, 215);
             this.OutputPanel.TabIndex = 0;
             this.OutputPanel.SizeChanged += new System.EventHandler(this.OutputWindow_SizeChanged);
             this.OutputPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.OutputWindow_Paint);
@@ -71,20 +73,31 @@
             // 
             // CommandBox
             // 
-            this.CommandBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.CommandBox.Dock = System.Windows.Forms.DockStyle.Top;
             this.CommandBox.Location = new System.Drawing.Point(0, 0);
             this.CommandBox.Multiline = true;
             this.CommandBox.Name = "CommandBox";
             this.CommandBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.CommandBox.Size = new System.Drawing.Size(292, 48);
+            this.CommandBox.Size = new System.Drawing.Size(292, 56);
             this.CommandBox.TabIndex = 0;
             this.CommandBox.KeyDown += new System.Windows.Forms.KeyEventHandler(this.CommandBox_KeyDown);
+            // 
+            // showIntermediates
+            // 
+            this.showIntermediates.AutoSize = true;
+            this.showIntermediates.Dock = System.Windows.Forms.DockStyle.Bottom;
+            this.showIntermediates.Location = new System.Drawing.Point(0, 62);
+            this.showIntermediates.Name = "showIntermediates";
+            this.showIntermediates.Size = new System.Drawing.Size(292, 17);
+            this.showIntermediates.TabIndex = 1;
+            this.showIntermediates.Text = "Show intermediate steps";
+            this.showIntermediates.UseVisualStyleBackColor = true;
             // 
             // MainWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(292, 266);
+            this.ClientSize = new System.Drawing.Size(292, 298);
             this.Controls.Add(this.splitContainer1);
             this.Name = "MainWindow";
             this.Text = "CAS Window";
@@ -103,6 +116,7 @@
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.Panel OutputPanel;
         private System.Windows.Forms.TextBox CommandBox;
+        private System.Windows.Forms.CheckBox showIntermediates;
 
 
     }

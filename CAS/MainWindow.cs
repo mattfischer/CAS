@@ -77,6 +77,10 @@ namespace CAS
                 if (topExpression != lastExpression)
                 {
                     treeViewer.AddExpression(topExpression, title);
+                    if (showIntermediates.Checked)
+                    {
+                        queueExpression(topExpression, DisplayRegion.LeftRight.Right);
+                    }
                     lastExpression = topExpression;
                 }
             }
@@ -95,6 +99,10 @@ namespace CAS
                 if (exp != lastExpression)
                 {
                     treeViewer.AddExpression(exp, title);
+                    if (showIntermediates.Checked)
+                    {
+                        queueExpression(exp, DisplayRegion.LeftRight.Right);
+                    }
                     lastExpression = exp;
                 }
             }
@@ -127,20 +135,17 @@ namespace CAS
             {
                 Expression expression = parser.Parse();
                 treeViewer.ClearExpressions();
-                treeViewer.Show();
-                treeViewer.BringToFront();
 
                 topExpression = expression;
                 lastExpression = expression;
                 treeViewer.AddExpression(expression, "Start");
-                DisplayRegion region = new DisplayRegion(0, expression, DisplayRegion.LeftRight.Left);
-                renderQueue.Add(region);
+                queueExpression(expression, DisplayRegion.LeftRight.Left);
 
                 Expression result = Evaluate.Eval(expression, logReplace);
-
-                region = new DisplayRegion(0, result, DisplayRegion.LeftRight.Right);
-                renderQueue.Add(region);
-                renderEvent.Set();
+                if (!showIntermediates.Checked)
+                {
+                    queueExpression(result, DisplayRegion.LeftRight.Right);
+                }
             }
             catch (Parser.ParseException ex)
             {
@@ -158,6 +163,13 @@ namespace CAS
                 regions.Add(region);
                 updateOutput();
             }
+        }
+
+        void queueExpression(Expression expression, DisplayRegion.LeftRight leftRight)
+        {
+            DisplayRegion region = new DisplayRegion(0, expression, leftRight);
+            renderQueue.Add(region);
+            renderEvent.Set();
         }
 
         void CommandBox_KeyDown(object sender, KeyEventArgs e)
