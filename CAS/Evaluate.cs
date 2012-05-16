@@ -18,14 +18,17 @@ namespace CAS
             ex = recurse(ex, flatten);
             log(ex, "Flatten");
 
-            ex = recurse(ex, commonDenominator);
-            log(ex, "Common Denominator");
+            ex = recurse(ex, rationalize);
+            log(ex, "Rationalize");
 
             ex = recurse(ex, expand);
             log(ex, "Expand");
 
             ex = recurse(ex, fold);
             log(ex, "Fold");
+
+            ex = recurse(ex, collect);
+            log(ex, "Collect");
 
             return ex;
         }
@@ -73,11 +76,7 @@ namespace CAS
                             }
                         }
 
-                        if (children.Count == 0)
-                        {
-                            ret = null;
-                        }
-                        else if (children.Count == 1)
+                        if (children.Count == 1)
                         {
                             ret = children[0];
                         }
@@ -92,7 +91,7 @@ namespace CAS
             return ret;
         }
 
-        static Expression commonDenominator(Expression expression)
+        static Expression rationalize(Expression expression)
         {
             Expression ret = expression;
 
@@ -100,19 +99,19 @@ namespace CAS
             {
                 case Expression.Type.Plus:
                     {
-                        Expression num = null;
-                        Expression den = null;
-                        foreach (Expression child in ret.Children)
+                        Expression num = constant(0);
+                        Expression den = constant(1);
+                        foreach (Expression term in terms(ret))
                         {
-                            if (num == null)
+                            if (denominator(term) == den)
                             {
-                                num = numerator(child);
+                                num = add(num, numerator(term));
                             }
                             else
                             {
-                                num = add(multiply(denominator(child), num), multiply(den, numerator(child)));
+                                num = add(multiply(denominator(term), num), multiply(den, numerator(term)));
+                                den = multiply(den, denominator(term));
                             }
-                            den = multiply(den, denominator(child));
                         }
 
                         ret = divide(num, den);
@@ -121,13 +120,13 @@ namespace CAS
 
                 case Expression.Type.Times:
                     {
-                        Expression num = null;
-                        Expression den = null;
+                        Expression num = constant(1);
+                        Expression den = constant(1);
 
-                        foreach (Expression child in ret.Children)
+                        foreach (Expression factor in factors(ret))
                         {
-                            num = multiply(num, numerator(child));
-                            den = multiply(den, denominator(child));
+                            num = multiply(num, numerator(factor));
+                            den = multiply(den, denominator(factor));
                         }
 
                         ret = divide(num, den);
@@ -155,85 +154,56 @@ namespace CAS
             {
                 case Expression.Type.Plus:
                     {
-                        Expression newRet = null;
+                        Expression rest = constant(0);
                         int result = 0;
-                        foreach (Expression child in ret.Children)
+                        foreach (Expression term in terms(ret))
                         {
-                            if (isConstant(child))
+                            if (isConstant(term))
                             {
-                                result += constantValue(child);
+                                result += constantValue(term);
                             }
                             else
                             {
-                                newRet = add(newRet, child);
+                                rest = add(rest, term);
                             }
                         }
-                        if (result != 0 || newRet == null)
-                        {
-                            newRet = add(newRet, constant(result));
-                        }
 
-                        ret = newRet;
-
+                        ret = add(rest, constant(result));
                         break;
                     }
 
                 case Expression.Type.Times:
                     {
-                        Expression newRet = null;
+                        Expression rest = constant(1);
                         int result = 1;
-                        foreach (Expression child in ret.Children)
+                        foreach (Expression factor in factors(ret))
                         {
-                            if (isConstant(child))
+                            if (isConstant(factor))
                             {
-                                result *= constantValue(child);
+                                result *= constantValue(factor);
                             }
                             else
                             {
-                                newRet = multiply(newRet, child);
+                                rest = multiply(rest, factor);
                             }
                         }
 
-                        if (result == 0)
-                        {
-                            ret = constant(0);
-                        }
-                        else
-                        {
-                            if (result != 1 || newRet == null)
-                            {
-                                newRet = multiply(constant(result), newRet);
-                            }
-
-                            ret = newRet;
-                        }
+                        ret = multiply(constant(result), rest);
                         break;
                     }
 
                 case Expression.Type.Divide:
+                    if (isConstant(numerator(ret)) && isConstant(denominator(ret)))
                     {
-                        if (isConstant(numerator(ret)) && isConstant(denominator(ret)))
-                        {
-                            int num = constantValue(numerator(ret));
-                            int den = constantValue(denominator(ret));
-                            int gcd = greatestCommonDivisor(num, den);
-                            num /= gcd;
-                            den /= gcd;
+                        int num = constantValue(numerator(ret));
+                        int den = constantValue(denominator(ret));
+                        int gcd = greatestCommonDivisor(num, den);
+                        num /= gcd;
+                        den /= gcd;
 
-                            ret = divide(constant(num), constant(den));
-                        }
-
-                        if (isConstant(numerator(ret)) && constantValue(numerator(ret)) == 0)
-                        {
-                            ret = constant(0);
-                        }
-                        else if (isConstant(denominator(ret)) && constantValue(denominator(ret)) == 1)
-                        {
-                            ret = numerator(ret);
-                        }
-
-                        break;
+                        ret = divide(constant(num), constant(den));
                     }
+                    break;
             }
 
             return ret;
@@ -251,27 +221,20 @@ namespace CAS
 
                 case Expression.Type.Times:
                     {
-                        Expression plus = null;
-                        foreach (Expression child in ret.Children)
+                        Expression expansion = constant(1);
+                        foreach (Expression factor in factors(ret))
                         {
-                            Expression newPlus = null;
-                            foreach (Expression term in terms(child))
+                            Expression newExpansion = constant(0);
+                            foreach (Expression factorTerm in terms(factor))
                             {
-                                if (plus == null)
+                                foreach (Expression term in terms(expansion))
                                 {
-                                    newPlus = add(newPlus, term);
-                                }
-                                else
-                                {
-                                    foreach (Expression oldTerm in terms(plus))
-                                    {
-                                        newPlus = add(newPlus, multiply(oldTerm, term));
-                                    }
+                                    newExpansion = add(newExpansion, multiply(term, factorTerm));
                                 }
                             }
-                            plus = newPlus;
+                            expansion = newExpansion;
                         }
-                        ret = plus;
+                        ret = expansion;
                         break;
                     }
             }
@@ -279,39 +242,114 @@ namespace CAS
             return ret;
         }
 
+        static Expression collect(Expression expression)
+        {
+            Expression ret = expression;
+
+            if (expression.ExpressionType == Expression.Type.Plus)
+            {
+                Dictionary<Expression, Expression> dict = new Dictionary<Expression, Expression>();
+
+                foreach (Expression child in terms(expression))
+                {
+                    Expression[] coeffTerm = coefficientTerm(child);
+                    Expression coefficient = coeffTerm[0];
+                    Expression term = coeffTerm[1];
+
+                    if (dict.ContainsKey(term))
+                    {
+                        dict[term] = add(dict[term], coefficient);
+                    }
+                    else
+                    {
+                        dict.Add(term, coefficient);
+                    }
+                }
+
+                ret = constant(0);
+                foreach (Expression term in dict.Keys)
+                {
+                    ret = add(ret, multiply(fold(dict[term]), term));
+                }
+            }
+
+            return ret;
+        }
+
         static Expression add(params Expression[] expressions)
-        {
-            return makeOp(Expression.Type.Plus, expressions);
-        }
-
-        static Expression multiply(params Expression[] expressions)
-        {
-            return makeOp(Expression.Type.Times, expressions);
-        }
-
-        static Expression makeOp(Expression.Type type, params Expression[] expressions)
         {
             List<Expression> children = new List<Expression>();
             foreach (Expression child in expressions)
             {
-                if (child != null)
+                if (child != constant(0))
                 {
                     children.Add(child);
                 }
             }
 
-            return flatten(new Expression(type, children.ToArray()));
+            if (children.Count == 0)
+            {
+                return constant(0);
+            }
+            else if (children.Count == 1)
+            {
+                return children[0];
+            }
+            else
+            {
+                return flatten(new Expression(Expression.Type.Plus, children.ToArray()));
+            }
+        }
+
+        static Expression multiply(params Expression[] expressions)
+        {
+            List<Expression> children = new List<Expression>();
+            bool zero = false;
+            foreach (Expression child in expressions)
+            {
+                if (child == constant(0))
+                {
+                    zero = true;
+                    break;
+                }
+
+                if (child != constant(1))
+                {
+                    children.Add(child);
+                }
+            }
+
+            if (zero)
+            {
+                return constant(0);
+            }
+            else if (children.Count == 0)
+            {
+                return constant(1);
+            }
+            else if (children.Count == 1)
+            {
+                return children[0];
+            }
+            else
+            {
+                return flatten(new Expression(Expression.Type.Times, children.ToArray()));
+            }
         }
 
         static Expression divide(Expression num, Expression den)
         {
-            if (den != null)
+            if (num == constant(0))
             {
-                return new Expression(Expression.Type.Divide, num, den);
+                return num;
+            }
+            else if (den == constant(1))
+            {
+                return num;
             }
             else
             {
-                return num;
+                return new Expression(Expression.Type.Divide, num, den);
             }
         }
 
@@ -335,13 +373,25 @@ namespace CAS
             }
             else
             {
-                return null;
+                return constant(1);
             }
         }
 
         static Expression[] terms(Expression expression)
         {
             if (expression.ExpressionType == Expression.Type.Plus)
+            {
+                return expression.Children;
+            }
+            else
+            {
+                return new Expression[] { expression };
+            }
+        }
+
+        static Expression[] factors(Expression expression)
+        {
+            if (expression.ExpressionType == Expression.Type.Times)
             {
                 return expression.Children;
             }
@@ -364,6 +414,26 @@ namespace CAS
         static int constantValue(Expression expression)
         {
             return (int)expression.Data;
+        }
+
+        static Expression[] coefficientTerm(Expression expression)
+        {
+            Expression coefficient = constant(1);
+            Expression term = constant(1);
+
+            foreach (Expression child in factors(expression))
+            {
+                if (isConstant(child))
+                {
+                    coefficient = multiply(coefficient, child);
+                }
+                else
+                {
+                    term = multiply(term, child);
+                }
+            }
+
+            return new Expression[] { coefficient, term };
         }
 
         static Expression recurse(Expression expression, ExpressionOperationDelegate func)
