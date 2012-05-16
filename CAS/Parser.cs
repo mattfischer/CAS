@@ -96,6 +96,19 @@ namespace CAS
 
         Expression GetFactor()
         {
+            Expression ret = GetAtom();
+            if (tokenizer.NextToken.TokenType == Tokenizer.Token.Type.Symbol && tokenizer.NextToken.String == "^")
+            {
+                tokenizer.Consume();
+                Expression exponent = GetFactor();
+                ret = new Expression(Expression.Type.Power, ret, exponent);
+            }
+
+            return ret;
+        }
+
+        Expression GetAtom()
+        {
             Tokenizer.Token token = tokenizer.Consume();
 
             switch (token.TokenType)

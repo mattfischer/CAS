@@ -102,7 +102,7 @@ namespace CAS
                 return ret;
             }
 
-            string[] symbols = { "+", "-", "*", "/", "(", ")" };
+            string[] symbols = { "+", "-", "*", "/", "(", ")", "^" };
             foreach (string symbol in symbols)
             {
                 if (rest.StartsWith(symbol))

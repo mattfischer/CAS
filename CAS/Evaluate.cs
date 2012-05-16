@@ -246,31 +246,64 @@ namespace CAS
         {
             Expression ret = expression;
 
-            if (expression.ExpressionType == Expression.Type.Plus)
+            switch (ret.ExpressionType)
             {
-                Dictionary<Expression, Expression> dict = new Dictionary<Expression, Expression>();
-
-                foreach (Expression child in terms(expression))
-                {
-                    Expression[] coeffTerm = coefficientTerm(child);
-                    Expression coefficient = coeffTerm[0];
-                    Expression term = coeffTerm[1];
-
-                    if (dict.ContainsKey(term))
+                case Expression.Type.Plus:
                     {
-                        dict[term] = add(dict[term], coefficient);
-                    }
-                    else
-                    {
-                        dict.Add(term, coefficient);
-                    }
-                }
+                        Dictionary<Expression, Expression> dict = new Dictionary<Expression, Expression>();
 
-                ret = constant(0);
-                foreach (Expression term in dict.Keys)
-                {
-                    ret = add(ret, multiply(fold(dict[term]), term));
-                }
+                        foreach (Expression child in terms(expression))
+                        {
+                            Expression[] coeffTerm = coefficientTerm(child);
+                            Expression coefficient = coeffTerm[0];
+                            Expression term = coeffTerm[1];
+
+                            term = recurse(term, sort);
+                            if (dict.ContainsKey(term))
+                            {
+                                dict[term] = add(dict[term], coefficient);
+                            }
+                            else
+                            {
+                                dict.Add(term, coefficient);
+                            }
+                        }
+
+                        ret = constant(0);
+                        foreach (Expression term in dict.Keys)
+                        {
+                            ret = add(ret, multiply(fold(dict[term]), term));
+                        }
+                        break;
+                    }
+
+                case Expression.Type.Times:
+                    {
+                        Dictionary<Expression, Expression> dict = new Dictionary<Expression, Expression>();
+
+                        foreach (Expression child in factors(expression))
+                        {
+                            Expression fact = factor(child);
+                            Expression exp = exponent(child);
+
+                            fact = recurse(fact, sort);
+                            if (dict.ContainsKey(fact))
+                            {
+                                dict[fact] = add(dict[fact], exp);
+                            }
+                            else
+                            {
+                                dict.Add(fact, exp);
+                            }
+                        }
+
+                        ret = constant(1);
+                        foreach (Expression factor in dict.Keys)
+                        {
+                            ret = multiply(ret, power(factor, fold(dict[factor])));
+                        }
+                        break;
+                    }
             }
 
             return ret;
@@ -353,6 +386,18 @@ namespace CAS
             }
         }
 
+        static Expression power(Expression factor, Expression exponent)
+        {
+            if (exponent == constant(1))
+            {
+                return factor;
+            }
+            else
+            {
+                return new Expression(Expression.Type.Power, factor, exponent);
+            }
+        }
+
         static Expression numerator(Expression expression)
         {
             if (expression.ExpressionType == Expression.Type.Divide)
@@ -374,6 +419,30 @@ namespace CAS
             else
             {
                 return constant(1);
+            }
+        }
+
+        static Expression exponent(Expression expression)
+        {
+            if (expression.ExpressionType == Expression.Type.Power)
+            {
+                return expression.Children[1];
+            }
+            else
+            {
+                return constant(1);
+            }
+        }
+
+        static Expression factor(Expression expression)
+        {
+            if (expression.ExpressionType == Expression.Type.Power)
+            {
+                return expression.Children[0];
+            }
+            else
+            {
+                return expression;
             }
         }
 
@@ -449,6 +518,27 @@ namespace CAS
 
             Expression ret = new Expression(expression.ExpressionType, expression.Data, children.ToArray());
             ret = func(ret);
+            return ret;
+        }
+
+        static Expression sort(Expression expression)
+        {
+            Expression ret = expression;
+
+            switch(ret.ExpressionType)
+            {
+                case Expression.Type.Plus:
+                case Expression.Type.Times:
+                    {
+                        Expression[] array = new Expression[ret.Children.Length];
+                        Array.Copy(ret.Children, array, ret.Children.Length);
+                        Array.Sort(array);
+
+                        ret = new Expression(ret.ExpressionType, ret.Data, array);
+                        break;
+                    }
+            }
+
             return ret;
         }
 

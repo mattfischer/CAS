@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CAS
 {
-    public class Expression
+    public class Expression : IComparable
     {
         public enum Type
         {
@@ -15,7 +15,8 @@ namespace CAS
             Minus,
             Times,
             Divide,
-            Negative
+            Negative,
+            Power
         };
 
         public Type ExpressionType
@@ -68,57 +69,79 @@ namespace CAS
             this.data = null;
         }
 
-        public override bool Equals(object o)
+        public int CompareTo(Object o)
         {
             if (o == null)
             {
-                return false;
+                return 1;
             }
 
             if (o.GetType() != GetType())
             {
-                return false;
+                return 1;
             }
 
             Expression b = (Expression)o;
 
             if (type != b.type)
             {
-                return false;
+                return type.CompareTo(b.type);
             }
 
-            if((data == null && b.data != null) || (data != null && b.data == null)) {
-                return false;
+            if (data == null && b.data != null)
+            {
+                return 1;
             }
 
-            if(data != null && !data.Equals(b.data)) {
-                return false;
+            int result;
+
+            if (data != null)
+            {
+                result = ((IComparable)data).CompareTo((IComparable)b.data);
+                if (result != 0)
+                {
+                    return result;
+                }
             }
 
             if(children == null && b.children == null)
             {
-                return true;
+                return 0;
             }
 
-            if (children == null || b.children == null)
+            if (children == null)
             {
-                return false;
+                return -1;
+            }
+            else if (b.children == null)
+            {
+                return 1;
             }
 
-            if (children.Length != b.children.Length)
+            if (children.Length > b.children.Length)
             {
-                return false;
+                return 1;
+            }
+            else if(children.Length < b.children.Length)
+            {
+                return -1;
             }
 
             for (int i = 0; i < children.Length; i++)
             {
-                if (!children[i].Equals(b.children[i]))
+                result = children[i].CompareTo(b.children[i]);
+                if (result != 0)
                 {
-                    return false;
+                    return result;
                 }
             }
 
-            return true;
+            return 0;
+        }
+
+        public override bool Equals(object obj)
+        {
+            return CompareTo(obj) == 0;
         }
 
         public static bool operator ==(Expression a, Expression b)
@@ -170,6 +193,8 @@ namespace CAS
                     return "*";
                 case Type.Divide:
                     return "/";
+                case Type.Power:
+                    return "^";
                 default:
                     return data.ToString();
             }

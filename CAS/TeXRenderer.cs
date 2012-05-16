@@ -122,6 +122,17 @@ namespace CAS
                     }
                     break;
 
+                case Expression.Type.Power:
+                    if (e.Children[0].ExpressionType == Expression.Type.Constant || e.Children[0].ExpressionType == Expression.Type.Variable)
+                    {
+                        ret = texString(e.Children[0]) + "^{" + texString(e.Children[1]) + "}";
+                    }
+                    else
+                    {
+                        ret = "(" + texString(e.Children[0]) + ")^{" + texString(e.Children[1]) + "}";
+                    }
+                    break;
+
                 default:
                     ret = e.Data.ToString();
                     break;
