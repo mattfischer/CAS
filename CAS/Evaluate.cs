@@ -542,21 +542,13 @@ namespace CAS
             a = Math.Abs(a);
             b = Math.Abs(b);
 
-            if (a == 0)
+            while (b != 0)
             {
-                return b;
+                int t = b;
+                b = a % b;
+                a = t;
             }
-            while (b > 0)
-            {
-                if (a > b)
-                {
-                    a = a - b;
-                }
-                else
-                {
-                    b = b - a;
-                }
-            }
+
             return a;
         }
     }
