@@ -184,19 +184,6 @@ namespace CAS
                         ret = multiply(constant(result), rest);
                         break;
                     }
-
-                case Expression.Type.Divide:
-                    if (isConstant(numerator(ret)) && isConstant(denominator(ret)))
-                    {
-                        int num = constantValue(numerator(ret));
-                        int den = constantValue(denominator(ret));
-                        int gcd = greatestCommonDivisor(num, den);
-                        num /= gcd;
-                        den /= gcd;
-
-                        ret = divide(constant(num), constant(den));
-                    }
-                    break;
             }
 
             return ret;
@@ -512,6 +499,8 @@ namespace CAS
             }
 
             Expression ret = new Expression(expression.ExpressionType, expression.Data, children.ToArray());
+            log(expression, ret, logTitle);
+            expression = ret;
             ret = func(ret);
             log(expression, ret, logTitle);
             return ret;
@@ -540,9 +529,8 @@ namespace CAS
 
         static Polynomial parsePolynomial(Expression expression)
         {
-            Dictionary<int, int> coeffs = new Dictionary<int, int>();
+            Dictionary<int, Rational> coeffs = new Dictionary<int, Rational>();
             Expression variable = null;
-            int highestPower = 0;
             foreach (Expression term in terms(expression))
             {
                 Expression[] coeffTerm = coefficientTerm(term);
@@ -568,24 +556,19 @@ namespace CAS
                                 variable = fact;
                             }
 
-                            highestPower = Math.Max(highestPower, (int)exp.Data);
-                            coeffs.Add((int)exp.Data, (int)coefficient.Data);
+                            coeffs.Add((int)exp.Data, new Rational((int)coefficient.Data));
                             break;
                         }
 
                     case Expression.Type.Constant:
                         {
-                            coeffs.Add(0, (int)coefficient.Data);
+                            coeffs.Add(0, new Rational((int)coefficient.Data));
                             break;
                         }
                 }
             }
 
-            if (variable == null)
-            {
-                return null;
-            }
-            Polynomial poly = new Polynomial((string)variable.Data, coeffs);
+            Polynomial poly = new Polynomial(variable, coeffs);
             return poly;
         }
 
@@ -608,6 +591,9 @@ namespace CAS
                     den = makePolynomial(Polynomial.divide(denPoly, gcd)[0]);
 
                     ret = divide(num, den);
+                    log(expression, ret, "RationalPoly");
+                    ret = recurse(ret, rationalize, "Rationalize");
+                    ret = recurse(ret, fold, "Fold");
                 }
             }
 
@@ -621,18 +607,18 @@ namespace CAS
             {
                 if (i == 0)
                 {
-                    ret = add(ret, constant(poly.Coefficients[i]));
+                    ret = add(ret, rational(poly.Coefficients[i]));
                 } else {
-                    ret = add(ret, multiply(constant(poly.Coefficients[i]), power(variable(poly.Variable), constant(i))));
+                    ret = add(ret, multiply(rational(poly.Coefficients[i]), power(poly.Variable, constant(i))));
                 }
             }
 
             return ret;
         }
 
-        static Expression variable(string name)
+        static Expression rational(Rational rat)
         {
-            return new Expression(Expression.Type.Variable, name);
+            return divide(constant(rat.Numerator), constant(rat.Denominator));
         }
 
         static int greatestCommonDivisor(int a, int b)

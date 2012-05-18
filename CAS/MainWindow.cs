@@ -74,6 +74,7 @@ namespace CAS
             {
                 topExpression = newExp;
                 expressionReplacements.Clear();
+                expressionReplacementsRev.Clear();
                 if (topExpression != lastExpression)
                 {
                     treeViewer.AddExpression(topExpression, title);
@@ -90,9 +91,24 @@ namespace CAS
                 {
                     expressionReplacements[oldExp] = newExp;
                 }
+                else if (expressionReplacementsRev.ContainsKey(oldExp))
+                {
+                    Expression orig = expressionReplacementsRev[oldExp];
+                    expressionReplacements[orig] = newExp;
+                    expressionReplacementsRev.Remove(oldExp);
+                }
                 else
                 {
                     expressionReplacements.Add(oldExp, newExp);
+                }
+
+                if (expressionReplacementsRev.ContainsKey(newExp))
+                {
+                    expressionReplacementsRev[newExp] = oldExp;
+                }
+                else
+                {
+                    expressionReplacementsRev.Add(newExp, oldExp);
                 }
 
                 Expression exp = constructExpression(topExpression);
@@ -306,6 +322,7 @@ namespace CAS
         }
 
         Dictionary<Expression, Expression> expressionReplacements = new Dictionary<Expression, Expression>(new Comparer());
+        Dictionary<Expression, Expression> expressionReplacementsRev = new Dictionary<Expression, Expression>(new Comparer());
 
         private void MainWindow_FormClosed(object sender, FormClosedEventArgs e)
         {

@@ -7,36 +7,66 @@ namespace CAS
 {
     class Polynomial
     {
-        public Polynomial(string variable, int[] coefficients)
+        public Polynomial(Rational constant)
         {
-            this.variable = variable;
-            this.coefficients = coefficients;
+            this.variable = null;
+            this.coefficients = new Rational[] { constant };
         }
 
-        public Polynomial(string variable, Dictionary<int, int> coefficients)
+        public Polynomial(Expression variable, Rational[] coefficients)
+        {
+            this.variable = variable;
+            if (coefficients.Length > 0)
+            {
+                int max = 0;
+                for (int i = 0; i < coefficients.Length; i++)
+                {
+                    if (coefficients[i] != new Rational(0))
+                    {
+                        max = i;
+                    }
+                }
+
+                this.coefficients = new Rational[max + 1];
+                Array.Copy(coefficients, this.coefficients, max + 1);
+            }
+            else
+            {
+                this.coefficients = new Rational[] { new Rational(0) };
+            }
+        }
+
+        public Polynomial(Expression variable, Dictionary<int, Rational> coefficients)
         {
             this.variable = variable;
             int degree = -1;
             foreach (int exp in coefficients.Keys)
             {
-                degree = Math.Max(degree, exp);
+                if (coefficients[exp] != new Rational(0))
+                {
+                    degree = Math.Max(degree, exp);
+                }
             }
-            this.coefficients = new int[degree + 1];
+            this.coefficients = new Rational[degree + 1];
             for (int i = 0; i <= degree; i++)
             {
                 if (coefficients.ContainsKey(i))
                 {
                     this.coefficients[i] = coefficients[i];
                 }
+                else
+                {
+                    this.coefficients[i] = new Rational(0);
+                }
             }
         }
 
-        public int[] Coefficients
+        public Rational[] Coefficients
         {
             get { return coefficients; }
         }
 
-        public string Variable
+        public Expression Variable
         {
             get { return variable; }
         }
@@ -52,12 +82,12 @@ namespace CAS
             Polynomial remainder;
             if (divisor.Degree > dividend.Degree)
             {
-                quotient = new Polynomial(dividend.Variable, new int[] { 0 });
+                quotient = new Polynomial(dividend.Variable, new Rational[] { new Rational(0) });
                 remainder = dividend;
                 return new Polynomial[] { quotient, remainder };
             }
 
-            int[] coeffs = new int[dividend.Degree + 1];
+            Rational[] coeffs = new Rational[dividend.Degree + 1];
             Array.Copy(dividend.Coefficients, coeffs, dividend.Degree + 1);
             for (int i = dividend.Degree; i >= divisor.Degree; i--)
             {
@@ -68,8 +98,8 @@ namespace CAS
                 }
             }
 
-            int[] quotientCoeffs = new int[dividend.Degree - divisor.Degree + 1];
-            int[] remainderCoeffs = new int[divisor.Degree];
+            Rational[] quotientCoeffs = new Rational[dividend.Degree - divisor.Degree + 1];
+            Rational[] remainderCoeffs = new Rational[divisor.Degree];
             Array.Copy(coeffs, remainderCoeffs, remainderCoeffs.Length);
             Array.Copy(coeffs, remainderCoeffs.Length, quotientCoeffs, 0, quotientCoeffs.Length);
 
@@ -80,7 +110,7 @@ namespace CAS
 
         public static Polynomial gcd(Polynomial a, Polynomial b)
         {
-            while (b.Degree > 0 || b.Coefficients[0] != 0)
+            while (b.Degree > 0 || b.coefficients[0] != new Rational(0))
             {
                 Polynomial t = b;
                 Polynomial[] result = divide(a, b);
@@ -91,7 +121,7 @@ namespace CAS
             return a;
         }
 
-        int[] coefficients;
-        string variable;
+        Rational[] coefficients;
+        Expression variable;
     }
 }

@@ -49,6 +49,7 @@
     <Compile Include="Evaluate.cs" />
     <Compile Include="Expression.cs" />
     <Compile Include="Polynomial.cs" />
+    <Compile Include="Rational.cs" />
     <Compile Include="TreeViewer.cs">
       <SubType>Form</SubType>
     </Compile>
