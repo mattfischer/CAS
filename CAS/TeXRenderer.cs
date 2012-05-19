@@ -133,6 +133,23 @@ namespace CAS
                     }
                     break;
 
+                case Expression.Type.Function:
+                    {
+                        bool first = true;
+                        ret = (string)e.Data + "(";
+                        foreach (Expression arg in e.Children)
+                        {
+                            if (!first)
+                            {
+                                ret += ",";
+                            }
+                            ret += texString(arg);
+                            first = false;
+                        }
+                        ret += ")";
+                        break;
+                    }
+
                 default:
                     ret = e.Data.ToString();
                     break;

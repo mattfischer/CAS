@@ -16,7 +16,8 @@ namespace CAS
             Times,
             Divide,
             Negative,
-            Power
+            Power,
+            Function
         };
 
         public Type ExpressionType

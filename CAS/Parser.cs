@@ -117,8 +117,34 @@ namespace CAS
                     return new Expression(Expression.Type.Constant, Int32.Parse(token.String));
 
                 case Tokenizer.Token.Type.Identifier:
-                    return new Expression(Expression.Type.Variable, token.String);
+                    {
+                        if (tokenizer.NextToken.String == "(")
+                        {
+                            tokenizer.Consume();
+                            List<Expression> args = new List<Expression>();
+                            while (tokenizer.NextToken.String != ")")
+                            {
+                                Expression arg = GetExpression();
+                                args.Add(arg);
 
+                                if (tokenizer.NextToken.String == ",")
+                                {
+                                    tokenizer.Consume();
+                                }
+                                else if (tokenizer.NextToken.String != ")")
+                                {
+                                    throw new ParseException(tokenizer.NextToken.Position, "Expected , or ), got " + tokenizer.NextToken.String);
+                                }
+                            }
+                            tokenizer.Consume();
+
+                            return new Expression(Expression.Type.Function, token.String, args.ToArray());
+                        }
+                        else
+                        {
+                            return new Expression(Expression.Type.Variable, token.String);
+                        }
+                    }
                 case Tokenizer.Token.Type.Symbol:
                     if (token.String == "-")
                     {
