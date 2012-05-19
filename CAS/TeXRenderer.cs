@@ -136,7 +136,7 @@ namespace CAS
                 case Expression.Type.Function:
                     {
                         bool first = true;
-                        ret = (string)e.Data + "(";
+                        ret = @"{\rm " + (string)e.Data + "} (";
                         foreach (Expression arg in e.Children)
                         {
                             if (!first)

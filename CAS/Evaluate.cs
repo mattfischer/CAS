@@ -15,6 +15,7 @@ namespace CAS
         {
             log = lg;
 
+            ex = recurse(ex, call, "Call");
             ex = recurse(ex, removeMinus, "RemoveMinus");
             ex = recurse(ex, flatten, "Flatten");
             ex = recurse(ex, rationalize, "Rationalize");
@@ -597,6 +598,73 @@ namespace CAS
                 }
             }
 
+            return ret;
+        }
+
+        struct FunctionEntry
+        {
+            public string name;
+            public ExpressionOperationDelegate func;
+
+            public FunctionEntry(string name, ExpressionOperationDelegate func)
+            {
+                this.name = name;
+                this.func = func;
+            }
+        };
+
+        static Expression replace(Expression source, Expression var, Expression val)
+        {
+            Expression ret = source;
+
+            if (source == var)
+            {
+                ret = val;
+            }
+            else
+            {
+                List<Expression> children = new List<Expression>();
+                if (source.Children != null)
+                {
+                    foreach (Expression child in source.Children)
+                    {
+                        children.Add(replace(child, var, val));
+                    }
+                }
+                ret = new Expression(source.ExpressionType, source.Data, children.ToArray());
+            }
+
+            return ret;
+        }
+
+        static Expression substitute(Expression expression)
+        {
+            Expression source = expression.Children[0];
+            Expression var = expression.Children[1];
+            Expression val = expression.Children[2];
+
+            Expression ret = replace(source, var, val);
+
+            return ret;
+        }
+
+        static FunctionEntry[] functions = { new FunctionEntry("substitute", substitute) };
+
+        static Expression call(Expression expression)
+        {
+            Expression ret = expression;
+
+            if (ret.ExpressionType == Expression.Type.Function)
+            {
+                foreach (FunctionEntry entry in functions)
+                {
+                    if (entry.name == (string)ret.Data)
+                    {
+                        ret = entry.func(ret);
+                        break;
+                    }
+                }
+            }
             return ret;
         }
 
