@@ -13,7 +13,7 @@ namespace CAS
             this.coefficients = new Rational[] { constant };
         }
 
-        public Polynomial(Expression variable, Rational[] coefficients)
+        public Polynomial(Node variable, Rational[] coefficients)
         {
             this.variable = variable;
             if (coefficients.Length > 0)
@@ -36,7 +36,7 @@ namespace CAS
             }
         }
 
-        public Polynomial(Expression variable, Dictionary<int, Rational> coefficients)
+        public Polynomial(Node variable, Dictionary<int, Rational> coefficients)
         {
             this.variable = variable;
             int degree = -1;
@@ -66,7 +66,7 @@ namespace CAS
             get { return coefficients; }
         }
 
-        public Expression Variable
+        public Node Variable
         {
             get { return variable; }
         }
@@ -122,6 +122,6 @@ namespace CAS
         }
 
         Rational[] coefficients;
-        Expression variable;
+        Node variable;
     }
 }

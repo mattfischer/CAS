@@ -7,37 +7,37 @@ namespace CAS
 {
     class Evaluate
     {
-        public delegate void LogExpressionDelegate(Expression oldExp, Expression newExp, string title);
-        delegate Expression ExpressionOperationDelegate(Expression expression);
+        public delegate void LogNodeDelegate(Node oldNode, Node newNode, string title);
+        delegate Node NodeOperationDelegate(Node node);
 
-        static LogExpressionDelegate log = null;
-        public static Expression Eval(Expression ex, LogExpressionDelegate lg)
+        static LogNodeDelegate log = null;
+        public static Node Eval(Node node, LogNodeDelegate lg)
         {
             log = lg;
 
-            ex = recurse(ex, call, "Call");
-            ex = recurse(ex, removeMinus, "RemoveMinus");
-            ex = recurse(ex, flatten, "Flatten");
-            ex = recurse(ex, rationalize, "Rationalize");
-            ex = recurse(ex, expand, "Expand");
-            ex = recurse(ex, fold, "Fold");
-            ex = recurse(ex, collect, "Collect");
-            ex = recurse(ex, rationalPoly, "RationalPoly");
+            node = recurse(node, call, "Call");
+            node = recurse(node, removeMinus, "RemoveMinus");
+            node = recurse(node, flatten, "Flatten");
+            node = recurse(node, rationalize, "Rationalize");
+            node = recurse(node, expand, "Expand");
+            node = recurse(node, fold, "Fold");
+            node = recurse(node, collect, "Collect");
+            node = recurse(node, rationalPoly, "RationalPoly");
 
-            return ex;
+            return node;
         }
 
-        static Expression removeMinus(Expression expression)
+        static Node removeMinus(Node node)
         {
-            Expression ret = expression;
+            Node ret = node;
 
-            switch (ret.ExpressionType)
+            switch (ret.NodeType)
             {
-                case Expression.Type.Minus:
+                case Node.Type.Minus:
                     ret = add(ret.Children[0], multiply(constant(-1), ret.Children[1]));
                     break;
 
-                case Expression.Type.Negative:
+                case Node.Type.Negative:
                     ret = multiply(constant(-1), ret.Children[0]);
                     break;
             }
@@ -45,21 +45,21 @@ namespace CAS
             return ret;
         }
 
-        static Expression flatten(Expression expression)
+        static Node flatten(Node node)
         {
-            Expression ret = expression;
+            Node ret = node;
 
-            switch (ret.ExpressionType)
+            switch (ret.NodeType)
             {
-                case Expression.Type.Plus:
-                case Expression.Type.Times:
+                case Node.Type.Plus:
+                case Node.Type.Times:
                     {
-                        List<Expression> children = new List<Expression>();
+                        List<Node> children = new List<Node>();
                         if (ret.Children != null)
                         {
-                            foreach (Expression child in ret.Children)
+                            foreach (Node child in ret.Children)
                             {
-                                if (child.ExpressionType == ret.ExpressionType)
+                                if (child.NodeType == ret.NodeType)
                                 {
                                     children.AddRange(child.Children);
                                 }
@@ -76,7 +76,7 @@ namespace CAS
                         }
                         else
                         {
-                            ret = new Expression(ret.ExpressionType, children.ToArray());
+                            ret = new Node(ret.NodeType, children.ToArray());
                         }
                         break;
                     }
@@ -85,17 +85,17 @@ namespace CAS
             return ret;
         }
 
-        static Expression rationalize(Expression expression)
+        static Node rationalize(Node node)
         {
-            Expression ret = expression;
+            Node ret = node;
 
-            switch (ret.ExpressionType)
+            switch (ret.NodeType)
             {
-                case Expression.Type.Plus:
+                case Node.Type.Plus:
                     {
-                        Expression num = constant(0);
-                        Expression den = constant(1);
-                        foreach (Expression term in terms(ret))
+                        Node num = constant(0);
+                        Node den = constant(1);
+                        foreach (Node term in terms(ret))
                         {
                             if (denominator(term) == den)
                             {
@@ -112,12 +112,12 @@ namespace CAS
                         break;
                     }
 
-                case Expression.Type.Times:
+                case Node.Type.Times:
                     {
-                        Expression num = constant(1);
-                        Expression den = constant(1);
+                        Node num = constant(1);
+                        Node den = constant(1);
 
-                        foreach (Expression factor in factors(ret))
+                        foreach (Node factor in factors(ret))
                         {
                             num = multiply(num, numerator(factor));
                             den = multiply(den, denominator(factor));
@@ -127,10 +127,10 @@ namespace CAS
                         break;
                     }
 
-                case Expression.Type.Divide:
+                case Node.Type.Divide:
                     {
-                        Expression num = multiply(numerator(numerator(ret)), denominator(denominator(ret)));
-                        Expression den = multiply(denominator(numerator(ret)), numerator(denominator(ret)));
+                        Node num = multiply(numerator(numerator(ret)), denominator(denominator(ret)));
+                        Node den = multiply(denominator(numerator(ret)), numerator(denominator(ret)));
 
                         ret = divide(num, den);
                         break;
@@ -140,17 +140,17 @@ namespace CAS
             return ret;
         }
 
-        static Expression fold(Expression expression)
+        static Node fold(Node node)
         {
-            Expression ret = expression;
+            Node ret = node;
 
-            switch (ret.ExpressionType)
+            switch (ret.NodeType)
             {
-                case Expression.Type.Plus:
+                case Node.Type.Plus:
                     {
-                        Expression rest = constant(0);
+                        Node rest = constant(0);
                         int result = 0;
-                        foreach (Expression term in terms(ret))
+                        foreach (Node term in terms(ret))
                         {
                             if (isConstant(term))
                             {
@@ -166,11 +166,11 @@ namespace CAS
                         break;
                     }
 
-                case Expression.Type.Times:
+                case Node.Type.Times:
                     {
-                        Expression rest = constant(1);
+                        Node rest = constant(1);
                         int result = 1;
-                        foreach (Expression factor in factors(ret))
+                        foreach (Node factor in factors(ret))
                         {
                             if (isConstant(factor))
                             {
@@ -190,25 +190,25 @@ namespace CAS
             return ret;
         }
 
-        static Expression expand(Expression expression)
+        static Node expand(Node node)
         {
-            Expression ret = expression;
+            Node ret = node;
 
-            switch (ret.ExpressionType)
+            switch (ret.NodeType)
             {
-                case Expression.Type.Plus:
+                case Node.Type.Plus:
                     ret = flatten(ret);
                     break;
 
-                case Expression.Type.Times:
+                case Node.Type.Times:
                     {
-                        Expression expansion = constant(1);
-                        foreach (Expression factor in factors(ret))
+                        Node expansion = constant(1);
+                        foreach (Node factor in factors(ret))
                         {
-                            Expression newExpansion = constant(0);
-                            foreach (Expression factorTerm in terms(factor))
+                            Node newExpansion = constant(0);
+                            foreach (Node factorTerm in terms(factor))
                             {
-                                foreach (Expression term in terms(expansion))
+                                foreach (Node term in terms(expansion))
                                 {
                                     newExpansion = add(newExpansion, multiply(term, factorTerm));
                                 }
@@ -223,21 +223,21 @@ namespace CAS
             return ret;
         }
 
-        static Expression collect(Expression expression)
+        static Node collect(Node node)
         {
-            Expression ret = expression;
+            Node ret = node;
 
-            switch (ret.ExpressionType)
+            switch (ret.NodeType)
             {
-                case Expression.Type.Plus:
+                case Node.Type.Plus:
                     {
-                        Dictionary<Expression, Expression> dict = new Dictionary<Expression, Expression>();
+                        Dictionary<Node, Node> dict = new Dictionary<Node, Node>();
 
-                        foreach (Expression child in terms(expression))
+                        foreach (Node child in terms(node))
                         {
-                            Expression[] coeffTerm = coefficientTerm(child);
-                            Expression coefficient = coeffTerm[0];
-                            Expression term = coeffTerm[1];
+                            Node[] coeffTerm = coefficientTerm(child);
+                            Node coefficient = coeffTerm[0];
+                            Node term = coeffTerm[1];
 
                             term = recurse(term, sort, "Sort");
                             if (dict.ContainsKey(term))
@@ -251,21 +251,21 @@ namespace CAS
                         }
 
                         ret = constant(0);
-                        foreach (Expression term in dict.Keys)
+                        foreach (Node term in dict.Keys)
                         {
                             ret = add(ret, multiply(fold(dict[term]), term));
                         }
                         break;
                     }
 
-                case Expression.Type.Times:
+                case Node.Type.Times:
                     {
-                        Dictionary<Expression, Expression> dict = new Dictionary<Expression, Expression>();
+                        Dictionary<Node, Node> dict = new Dictionary<Node, Node>();
 
-                        foreach (Expression child in factors(expression))
+                        foreach (Node child in factors(node))
                         {
-                            Expression fact = factor(child);
-                            Expression exp = exponent(child);
+                            Node fact = factor(child);
+                            Node exp = exponent(child);
 
                             fact = recurse(fact, sort, "Sort");
                             if (dict.ContainsKey(fact))
@@ -279,7 +279,7 @@ namespace CAS
                         }
 
                         ret = constant(1);
-                        foreach (Expression factor in dict.Keys)
+                        foreach (Node factor in dict.Keys)
                         {
                             ret = multiply(ret, power(factor, fold(dict[factor])));
                         }
@@ -290,10 +290,10 @@ namespace CAS
             return ret;
         }
 
-        static Expression add(params Expression[] expressions)
+        static Node add(params Node[] nodes)
         {
-            List<Expression> children = new List<Expression>();
-            foreach (Expression child in expressions)
+            List<Node> children = new List<Node>();
+            foreach (Node child in nodes)
             {
                 if (child != constant(0))
                 {
@@ -311,15 +311,15 @@ namespace CAS
             }
             else
             {
-                return flatten(new Expression(Expression.Type.Plus, children.ToArray()));
+                return flatten(new Node(Node.Type.Plus, children.ToArray()));
             }
         }
 
-        static Expression multiply(params Expression[] expressions)
+        static Node multiply(params Node[] nodes)
         {
-            List<Expression> children = new List<Expression>();
+            List<Node> children = new List<Node>();
             bool zero = false;
-            foreach (Expression child in expressions)
+            foreach (Node child in nodes)
             {
                 if (child == constant(0))
                 {
@@ -347,11 +347,11 @@ namespace CAS
             }
             else
             {
-                return flatten(new Expression(Expression.Type.Times, children.ToArray()));
+                return flatten(new Node(Node.Type.Times, children.ToArray()));
             }
         }
 
-        static Expression divide(Expression num, Expression den)
+        static Node divide(Node num, Node den)
         {
             if (num == constant(0))
             {
@@ -363,11 +363,11 @@ namespace CAS
             }
             else
             {
-                return new Expression(Expression.Type.Divide, num, den);
+                return new Node(Node.Type.Divide, num, den);
             }
         }
 
-        static Expression power(Expression factor, Expression exponent)
+        static Node power(Node factor, Node exponent)
         {
             if (exponent == constant(1))
             {
@@ -375,39 +375,27 @@ namespace CAS
             }
             else
             {
-                return new Expression(Expression.Type.Power, factor, exponent);
+                return new Node(Node.Type.Power, factor, exponent);
             }
         }
 
-        static Expression numerator(Expression expression)
+        static Node numerator(Node node)
         {
-            if (expression.ExpressionType == Expression.Type.Divide)
+            if (node.NodeType == Node.Type.Divide)
             {
-                return expression.Children[0];
+                return node.Children[0];
             }
             else
             {
-                return expression;
+                return node;
             }
         }
 
-        static Expression denominator(Expression expression)
+        static Node denominator(Node node)
         {
-            if (expression.ExpressionType == Expression.Type.Divide)
+            if (node.NodeType == Node.Type.Divide)
             {
-                return expression.Children[1];
-            }
-            else
-            {
-                return constant(1);
-            }
-        }
-
-        static Expression exponent(Expression expression)
-        {
-            if (expression.ExpressionType == Expression.Type.Power)
-            {
-                return expression.Children[1];
+                return node.Children[1];
             }
             else
             {
@@ -415,63 +403,75 @@ namespace CAS
             }
         }
 
-        static Expression factor(Expression expression)
+        static Node exponent(Node node)
         {
-            if (expression.ExpressionType == Expression.Type.Power)
+            if (node.NodeType == Node.Type.Power)
             {
-                return expression.Children[0];
+                return node.Children[1];
             }
             else
             {
-                return expression;
+                return constant(1);
             }
         }
 
-        static Expression[] terms(Expression expression)
+        static Node factor(Node node)
         {
-            if (expression.ExpressionType == Expression.Type.Plus)
+            if (node.NodeType == Node.Type.Power)
             {
-                return expression.Children;
+                return node.Children[0];
             }
             else
             {
-                return new Expression[] { expression };
+                return node;
             }
         }
 
-        static Expression[] factors(Expression expression)
+        static Node[] terms(Node node)
         {
-            if (expression.ExpressionType == Expression.Type.Times)
+            if (node.NodeType == Node.Type.Plus)
             {
-                return expression.Children;
+                return node.Children;
             }
             else
             {
-                return new Expression[] { expression };
+                return new Node[] { node };
             }
         }
 
-        static Expression constant(int value)
+        static Node[] factors(Node node)
         {
-            return new Expression(Expression.Type.Constant, value);
+            if (node.NodeType == Node.Type.Times)
+            {
+                return node.Children;
+            }
+            else
+            {
+                return new Node[] { node };
+            }
         }
 
-        static bool isConstant(Expression expression)
+        static Node constant(int value)
         {
-            return expression.ExpressionType == Expression.Type.Constant;
+            return new Node(Node.Type.Constant, value);
         }
 
-        static int constantValue(Expression expression)
+        static bool isConstant(Node node)
         {
-            return (int)expression.Data;
+            return node.NodeType == Node.Type.Constant;
         }
 
-        static Expression[] coefficientTerm(Expression expression)
+        static int constantValue(Node node)
         {
-            Expression coefficient = constant(1);
-            Expression term = constant(1);
+            return (int)node.Data;
+        }
 
-            foreach (Expression child in factors(expression))
+        static Node[] coefficientTerm(Node node)
+        {
+            Node coefficient = constant(1);
+            Node term = constant(1);
+
+            foreach (Node child in factors(node))
             {
                 if (isConstant(child))
                 {
@@ -483,44 +483,44 @@ namespace CAS
                 }
             }
 
-            return new Expression[] { coefficient, term };
+            return new Node[] { coefficient, term };
         }
 
-        static Expression recurse(Expression expression, ExpressionOperationDelegate func, string logTitle)
+        static Node recurse(Node node, NodeOperationDelegate func, string logTitle)
         {
-            List<Expression> children = new List<Expression>();
-            if (expression.Children != null)
+            List<Node> children = new List<Node>();
+            if (node.Children != null)
             {
-                foreach (Expression child in expression.Children)
+                foreach (Node child in node.Children)
                 {
-                    Expression newChild = recurse(child, func, logTitle);
+                    Node newChild = recurse(child, func, logTitle);
                     log(child, newChild, logTitle);
                     children.Add(newChild);
                 }
             }
 
-            Expression ret = new Expression(expression.ExpressionType, expression.Data, children.ToArray());
-            log(expression, ret, logTitle);
-            expression = ret;
+            Node ret = new Node(node.NodeType, node.Data, children.ToArray());
+            log(node, ret, logTitle);
+            node = ret;
             ret = func(ret);
-            log(expression, ret, logTitle);
+            log(node, ret, logTitle);
             return ret;
         }
 
-        static Expression sort(Expression expression)
+        static Node sort(Node node)
         {
-            Expression ret = expression;
+            Node ret = node;
 
-            switch(ret.ExpressionType)
+            switch(ret.NodeType)
             {
-                case Expression.Type.Plus:
-                case Expression.Type.Times:
+                case Node.Type.Plus:
+                case Node.Type.Times:
                     {
-                        Expression[] array = new Expression[ret.Children.Length];
+                        Node[] array = new Node[ret.Children.Length];
                         Array.Copy(ret.Children, array, ret.Children.Length);
                         Array.Sort(array);
 
-                        ret = new Expression(ret.ExpressionType, ret.Data, array);
+                        ret = new Node(ret.NodeType, ret.Data, array);
                         break;
                     }
             }
@@ -528,25 +528,25 @@ namespace CAS
             return ret;
         }
 
-        static Polynomial parsePolynomial(Expression expression)
+        static Polynomial parsePolynomial(Node node)
         {
             Dictionary<int, Rational> coeffs = new Dictionary<int, Rational>();
-            Expression variable = null;
-            foreach (Expression term in terms(expression))
+            Node variable = null;
+            foreach (Node term in terms(node))
             {
-                Expression[] coeffTerm = coefficientTerm(term);
-                Expression coefficient = coeffTerm[0];
-                Expression var = coeffTerm[1];
-                Expression fact = factor(var);
-                Expression exp = exponent(var);
+                Node[] coeffTerm = coefficientTerm(term);
+                Node coefficient = coeffTerm[0];
+                Node var = coeffTerm[1];
+                Node fact = factor(var);
+                Node exp = exponent(var);
 
                 if (!isConstant(coefficient) || !isConstant(exp))
                 {
                     return null;
                 }
 
-                switch(fact.ExpressionType) {
-                    case Expression.Type.Variable:
+                switch(fact.NodeType) {
+                    case Node.Type.Variable:
                         {
                             if (variable != null && (string)variable.Data != (string)fact.Data)
                             {
@@ -561,7 +561,7 @@ namespace CAS
                             break;
                         }
 
-                    case Expression.Type.Constant:
+                    case Node.Type.Constant:
                         {
                             coeffs.Add(0, new Rational((int)coefficient.Data));
                             break;
@@ -573,14 +573,14 @@ namespace CAS
             return poly;
         }
 
-        static Expression rationalPoly(Expression expression)
+        static Node rationalPoly(Node node)
         {
-            Expression ret = expression;
+            Node ret = node;
 
-            if (expression.ExpressionType == Expression.Type.Divide)
+            if (node.NodeType == Node.Type.Divide)
             {
-                Expression num = numerator(ret);
-                Expression den = denominator(ret);
+                Node num = numerator(ret);
+                Node den = denominator(ret);
                 Polynomial numPoly = parsePolynomial(num);
                 Polynomial denPoly = parsePolynomial(den);
 
@@ -592,7 +592,7 @@ namespace CAS
                     den = makePolynomial(Polynomial.divide(denPoly, gcd)[0]);
 
                     ret = divide(num, den);
-                    log(expression, ret, "RationalPoly");
+                    log(node, ret, "RationalPoly");
                     ret = recurse(ret, rationalize, "Rationalize");
                     ret = recurse(ret, fold, "Fold");
                 }
@@ -604,18 +604,18 @@ namespace CAS
         struct FunctionEntry
         {
             public string name;
-            public ExpressionOperationDelegate func;
+            public NodeOperationDelegate func;
 
-            public FunctionEntry(string name, ExpressionOperationDelegate func)
+            public FunctionEntry(string name, NodeOperationDelegate func)
             {
                 this.name = name;
                 this.func = func;
             }
         };
 
-        static Expression replace(Expression source, Expression var, Expression val)
+        static Node replace(Node source, Node var, Node val)
         {
-            Expression ret = source;
+            Node ret = source;
 
             if (source == var)
             {
@@ -623,38 +623,38 @@ namespace CAS
             }
             else
             {
-                List<Expression> children = new List<Expression>();
+                List<Node> children = new List<Node>();
                 if (source.Children != null)
                 {
-                    foreach (Expression child in source.Children)
+                    foreach (Node child in source.Children)
                     {
                         children.Add(replace(child, var, val));
                     }
                 }
-                ret = new Expression(source.ExpressionType, source.Data, children.ToArray());
+                ret = new Node(source.NodeType, source.Data, children.ToArray());
             }
 
             return ret;
         }
 
-        static Expression substitute(Expression expression)
+        static Node substitute(Node node)
         {
-            Expression source = expression.Children[0];
-            Expression var = expression.Children[1];
-            Expression val = expression.Children[2];
+            Node source = node.Children[0];
+            Node var = node.Children[1];
+            Node val = node.Children[2];
 
-            Expression ret = replace(source, var, val);
+            Node ret = replace(source, var, val);
 
             return ret;
         }
 
         static FunctionEntry[] functions = { new FunctionEntry("substitute", substitute) };
 
-        static Expression call(Expression expression)
+        static Node call(Node node)
         {
-            Expression ret = expression;
+            Node ret = node;
 
-            if (ret.ExpressionType == Expression.Type.Function)
+            if (ret.NodeType == Node.Type.Function)
             {
                 foreach (FunctionEntry entry in functions)
                 {
@@ -668,9 +668,9 @@ namespace CAS
             return ret;
         }
 
-        static Expression makePolynomial(Polynomial poly)
+        static Node makePolynomial(Polynomial poly)
         {
-            Expression ret = constant(0);
+            Node ret = constant(0);
             for (int i = 0; i < poly.Degree + 1; i++)
             {
                 if (i == 0)
@@ -684,7 +684,7 @@ namespace CAS
             return ret;
         }
 
-        static Expression rational(Rational rat)
+        static Node rational(Rational rat)
         {
             return divide(constant(rat.Numerator), constant(rat.Denominator));
         }

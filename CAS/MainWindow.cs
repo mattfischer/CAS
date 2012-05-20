@@ -42,7 +42,7 @@ namespace CAS
                     DisplayRegion region = renderQueue.First();
                     renderQueue.RemoveAt(0);
 
-                    region.Bitmap = renderer.Render(region.Expression);
+                    region.Bitmap = renderer.Render(region.Node);
                     if (regions.Count > 0)
                     {
                         region.Top = regions.Last().Top + regions.Last().Bitmap.Size.Height + 2 * BORDER;
@@ -68,79 +68,79 @@ namespace CAS
         }
 
 
-        void logReplace(Expression oldExp, Expression newExp, string title)
+        void logReplace(Node oldNode, Node newNode, string title)
         {
-            if (ReferenceEquals(oldExp, topExpression))
+            if (ReferenceEquals(oldNode, topNode))
             {
-                topExpression = newExp;
-                expressionReplacements.Clear();
-                expressionReplacementsRev.Clear();
-                if (topExpression != lastExpression)
+                topNode = newNode;
+                nodeReplacements.Clear();
+                nodeReplacementsRev.Clear();
+                if (topNode != lastNode)
                 {
-                    treeViewer.AddExpression(topExpression, title);
+                    treeViewer.AddNode(topNode, title);
                     if (showIntermediates.Checked)
                     {
-                        queueExpression(topExpression, DisplayRegion.LeftRight.Right);
+                        queueNode(topNode, DisplayRegion.LeftRight.Right);
                     }
-                    lastExpression = topExpression;
+                    lastNode = topNode;
                 }
             }
             else
             {
-                if (expressionReplacements.ContainsKey(oldExp))
+                if (nodeReplacements.ContainsKey(oldNode))
                 {
-                    expressionReplacements[oldExp] = newExp;
+                    nodeReplacements[oldNode] = newNode;
                 }
-                else if (expressionReplacementsRev.ContainsKey(oldExp))
+                else if (nodeReplacementsRev.ContainsKey(oldNode))
                 {
-                    Expression orig = expressionReplacementsRev[oldExp];
-                    expressionReplacements[orig] = newExp;
-                    expressionReplacementsRev.Remove(oldExp);
-                }
-                else
-                {
-                    expressionReplacements.Add(oldExp, newExp);
-                }
-
-                if (expressionReplacementsRev.ContainsKey(newExp))
-                {
-                    expressionReplacementsRev[newExp] = oldExp;
+                    Node orig = nodeReplacementsRev[oldNode];
+                    nodeReplacements[orig] = newNode;
+                    nodeReplacementsRev.Remove(oldNode);
                 }
                 else
                 {
-                    expressionReplacementsRev.Add(newExp, oldExp);
+                    nodeReplacements.Add(oldNode, newNode);
                 }
 
-                Expression exp = constructExpression(topExpression);
-                if (exp != lastExpression)
+                if (nodeReplacementsRev.ContainsKey(newNode))
                 {
-                    treeViewer.AddExpression(exp, title);
+                    nodeReplacementsRev[newNode] = oldNode;
+                }
+                else
+                {
+                    nodeReplacementsRev.Add(newNode, oldNode);
+                }
+
+                Node exp = constructNode(topNode);
+                if (exp != lastNode)
+                {
+                    treeViewer.AddNode(exp, title);
                     if (showIntermediates.Checked)
                     {
-                        queueExpression(exp, DisplayRegion.LeftRight.Right);
+                        queueNode(exp, DisplayRegion.LeftRight.Right);
                     }
-                    lastExpression = exp;
+                    lastNode = exp;
                 }
             }
         }
 
-        Expression constructExpression(Expression expression)
+        Node constructNode(Node node)
         {
-            if (expressionReplacements.ContainsKey(expression))
+            if (nodeReplacements.ContainsKey(node))
             {
-                return expressionReplacements[expression];
+                return nodeReplacements[node];
             }
 
-            List<Expression> children = new List<Expression>();
-            if (expression.Children != null)
+            List<Node> children = new List<Node>();
+            if (node.Children != null)
             {
-                foreach (Expression child in expression.Children)
+                foreach (Node child in node.Children)
                 {
-                    children.Add(constructExpression(child));
+                    children.Add(constructNode(child));
                 }
             }
 
-            return new Expression(expression.ExpressionType, expression.Data, children.ToArray());
+            return new Node(node.NodeType, node.Data, children.ToArray());
         }
 
         void runCommand(string command)
@@ -149,18 +149,18 @@ namespace CAS
             Parser parser = new Parser(tokenizer);
             try
             {
-                Expression expression = parser.Parse();
-                treeViewer.ClearExpressions();
+                Node node = parser.Parse();
+                treeViewer.ClearNodes();
 
-                topExpression = expression;
-                lastExpression = expression;
-                treeViewer.AddExpression(expression, "Start");
-                queueExpression(expression, DisplayRegion.LeftRight.Left);
+                topNode = node;
+                lastNode = node;
+                treeViewer.AddNode(node, "Start");
+                queueNode(node, DisplayRegion.LeftRight.Left);
 
-                Expression result = Evaluate.Eval(expression, logReplace);
+                Node result = Evaluate.Eval(node, logReplace);
                 if (!showIntermediates.Checked)
                 {
-                    queueExpression(result, DisplayRegion.LeftRight.Right);
+                    queueNode(result, DisplayRegion.LeftRight.Right);
                 }
             }
             catch (Parser.ParseException ex)
@@ -181,9 +181,9 @@ namespace CAS
             }
         }
 
-        void queueExpression(Expression expression, DisplayRegion.LeftRight leftRight)
+        void queueNode(Node node, DisplayRegion.LeftRight leftRight)
         {
-            DisplayRegion region = new DisplayRegion(0, expression, leftRight);
+            DisplayRegion region = new DisplayRegion(0, node, leftRight);
             renderQueue.Add(region);
             renderEvent.Set();
         }
@@ -267,7 +267,7 @@ namespace CAS
         {
             public int Top;
             public Bitmap Bitmap;
-            public Expression Expression;
+            public Node Node;
             public enum LeftRight
             {
                 Left,
@@ -276,10 +276,10 @@ namespace CAS
 
             public LeftRight Side;
 
-            public DisplayRegion(int Top, Expression Expression, LeftRight Side)
+            public DisplayRegion(int Top, Node Node, LeftRight Side)
             {
                 this.Top = Top;
-                this.Expression = Expression;
+                this.Node = Node;
                 this.Side = Side;
                 this.Bitmap = null;
             }
@@ -287,7 +287,7 @@ namespace CAS
             public DisplayRegion(int Top, Bitmap Bitmap, LeftRight Side)
             {
                 this.Top = Top;
-                this.Expression = null;
+                this.Node = null;
                 this.Side = Side;
                 this.Bitmap = Bitmap;
             }
@@ -306,23 +306,23 @@ namespace CAS
 
         TreeViewer treeViewer = new TreeViewer();
 
-        Expression topExpression = null;
-        Expression lastExpression = null;
-        class Comparer : IEqualityComparer<Expression>
+        Node topNode = null;
+        Node lastNode = null;
+        class Comparer : IEqualityComparer<Node>
         {
-            public bool Equals(Expression a, Expression b)
+            public bool Equals(Node a, Node b)
             {
                 return ReferenceEquals(a, b);
             }
 
-            public int GetHashCode(Expression a)
+            public int GetHashCode(Node a)
             {
                 return a.GetHashCode();
             }
         }
 
-        Dictionary<Expression, Expression> expressionReplacements = new Dictionary<Expression, Expression>(new Comparer());
-        Dictionary<Expression, Expression> expressionReplacementsRev = new Dictionary<Expression, Expression>(new Comparer());
+        Dictionary<Node, Node> nodeReplacements = new Dictionary<Node, Node>(new Comparer());
+        Dictionary<Node, Node> nodeReplacementsRev = new Dictionary<Node, Node>(new Comparer());
 
         private void MainWindow_FormClosed(object sender, FormClosedEventArgs e)
         {

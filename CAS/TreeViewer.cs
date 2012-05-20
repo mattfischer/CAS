@@ -13,12 +13,12 @@ namespace CAS
     {
         class LayoutNode
         {
-            public Expression expression;
+            public Node node;
             public List<LayoutNode> children;
             public Point position;
-            public LayoutNode(Expression expression, List<LayoutNode> children, Point position)
+            public LayoutNode(Node node, List<LayoutNode> children, Point position)
             {
-                this.expression = expression;
+                this.node = node;
                 this.children = children;
                 this.position = position;
             }
@@ -57,14 +57,14 @@ namespace CAS
             }
         }
 
-        LayoutNode layoutExpression(Expression expression, List<LayoutNode> rightmost, int depth)
+        LayoutNode layout(Node node, List<LayoutNode> rightmost, int depth)
         {
             List<LayoutNode> children = null;
             int x, y;
 
             x = BORDER;
             y = BORDER + depth * VERTICAL_SPACE;
-            if (expression.Children != null)
+            if (node.Children != null)
             {
                 if (rightmost.Count == depth + 1)
                 {
@@ -72,32 +72,32 @@ namespace CAS
                 }
 
                 children = new List<LayoutNode>();
-                foreach (Expression child in expression.Children)
+                foreach (Node child in node.Children)
                 {
-                    LayoutNode childNode = layoutExpression(child, rightmost, depth + 1);
+                    LayoutNode childNode = layout(child, rightmost, depth + 1);
                     children.Add(childNode);
                 }
 
                 x = (children.First().position.X + children.Last().position.X) / 2;
             }
 
-            LayoutNode node = new LayoutNode(expression, children, new Point(x, y));
+            LayoutNode layoutNode = new LayoutNode(node, children, new Point(x, y));
 
             if (rightmost[depth] != null)
             {
                 int nextPosition = rightmost[depth].position.X + HORIZONTAL_SPACE;
-                if (nextPosition > node.position.X)
+                if (nextPosition > layoutNode.position.X)
                 {
-                    moveNode(node, nextPosition - node.position.X);
+                    moveNode(layoutNode, nextPosition - layoutNode.position.X);
                 }
             }
 
-            rightmost[depth] = node;
+            rightmost[depth] = layoutNode;
 
-            return node;
+            return layoutNode;
         }
 
-        void layout()
+        void doLayout()
         {
             int width, height;
             width = 0;
@@ -106,7 +106,7 @@ namespace CAS
             {
                 List<LayoutNode> rightmost = new List<LayoutNode>();
                 rightmost.Add(null);
-                layoutRoot = layoutExpression(expressions[active], rightmost, 0);
+                layoutRoot = layout(expressions[active], rightmost, 0);
 
 
                 width = 0;
@@ -124,10 +124,10 @@ namespace CAS
             DisplayPanel.Invalidate();
         }
 
-        List<Expression> expressions = new List<Expression>();
+        List<Node> expressions = new List<Node>();
         int active = 0;
         LayoutNode layoutRoot = null;
-        public void ClearExpressions()
+        public void ClearNodes()
         {
             expressions.Clear();
             SelectBox.Items.Clear();
@@ -135,7 +135,7 @@ namespace CAS
             Invalidate();
         }
 
-        public void AddExpression(Expression expression, string title)
+        public void AddNode(Node expression, string title)
         {
             expressions.Add(expression);
             SelectBox.Items.Add(title);
@@ -143,21 +143,21 @@ namespace CAS
             SelectBox.SelectedIndices.Add(expressions.Count - 1);
         }
 
-        void drawNode(LayoutNode node, Graphics g)
+        void drawNode(LayoutNode layoutNode, Graphics g)
         {
-            if (node.children != null)
+            if (layoutNode.children != null)
             {
-                foreach (LayoutNode child in node.children)
+                foreach (LayoutNode child in layoutNode.children)
                 {
-                    g.DrawLine(EdgePen, node.position, child.position);
+                    g.DrawLine(EdgePen, layoutNode.position, child.position);
                     drawNode(child, g);
                 }
             }
 
-            g.FillEllipse(CircleBrush, node.position.X - CIRCLE_RADIUS, node.position.Y - CIRCLE_RADIUS, CIRCLE_RADIUS * 2, CIRCLE_RADIUS * 2);
-            g.DrawEllipse(CirclePen, node.position.X - CIRCLE_RADIUS, node.position.Y - CIRCLE_RADIUS, CIRCLE_RADIUS * 2, CIRCLE_RADIUS * 2);
-            SizeF size = g.MeasureString(node.expression.ToString(), TextFont);
-            g.DrawString(node.expression.ToString(), TextFont, TextBrush, node.position.X - size.Width / 2, node.position.Y - (int)size.Height / 2);
+            g.FillEllipse(CircleBrush, layoutNode.position.X - CIRCLE_RADIUS, layoutNode.position.Y - CIRCLE_RADIUS, CIRCLE_RADIUS * 2, CIRCLE_RADIUS * 2);
+            g.DrawEllipse(CirclePen, layoutNode.position.X - CIRCLE_RADIUS, layoutNode.position.Y - CIRCLE_RADIUS, CIRCLE_RADIUS * 2, CIRCLE_RADIUS * 2);
+            SizeF size = g.MeasureString(layoutNode.node.ToString(), TextFont);
+            g.DrawString(layoutNode.node.ToString(), TextFont, TextBrush, layoutNode.position.X - size.Width / 2, layoutNode.position.Y - (int)size.Height / 2);
         }
 
         private void Display_Paint(object sender, PaintEventArgs e)
@@ -182,7 +182,7 @@ namespace CAS
             {
                 active = -1;
             }
-            layout();
+            doLayout();
         }
     }
 }

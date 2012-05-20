@@ -5,7 +5,7 @@ using System.Text;
 
 namespace CAS
 {
-    public class Expression : IComparable
+    public class Node : IComparable
     {
         public enum Type
         {
@@ -20,12 +20,12 @@ namespace CAS
             Function
         };
 
-        public Type ExpressionType
+        public Type NodeType
         {
             get { return type; }
         }
 
-        public Expression[] Children
+        public Node[] Children
         {
             get { return children; }
         }
@@ -35,14 +35,14 @@ namespace CAS
             get { return data; }
         }
 
-        public Expression(Type type, Object data = null)
+        public Node(Type type, Object data = null)
         {
             this.type = type;
             this.children = null;
             this.data = data;
         }
 
-        public Expression(Type type, Object data, params Expression[] children)
+        public Node(Type type, Object data, params Node[] children)
         {
             this.type = type;
             if (children.Length > 0)
@@ -56,7 +56,7 @@ namespace CAS
             this.data = data;
         }
 
-        public Expression(Type type, params Expression[] children)
+        public Node(Type type, params Node[] children)
         {
             this.type = type;
             if (children.Length > 0)
@@ -82,7 +82,7 @@ namespace CAS
                 return 1;
             }
 
-            Expression b = (Expression)o;
+            Node b = (Node)o;
 
             if (type != b.type)
             {
@@ -145,7 +145,7 @@ namespace CAS
             return CompareTo(obj) == 0;
         }
 
-        public static bool operator ==(Expression a, Expression b)
+        public static bool operator ==(Node a, Node b)
         {
             if (ReferenceEquals(a, null))
             {
@@ -155,7 +155,7 @@ namespace CAS
             return a.Equals(b);
         }
 
-        public static bool operator !=(Expression a, Expression b)
+        public static bool operator !=(Node a, Node b)
         {
             return !(a == b);
         }
@@ -172,7 +172,7 @@ namespace CAS
 
             if (children != null)
             {
-                foreach (Expression child in children)
+                foreach (Node child in children)
                 {
                     hash ^= child.GetHashCode();
                 }
@@ -202,7 +202,7 @@ namespace CAS
         }
 
         Type type;
-        Expression[] children;
+        Node[] children;
         Object data;
     }
 }

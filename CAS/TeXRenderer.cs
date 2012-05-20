@@ -13,7 +13,7 @@ namespace CAS
     {
         static string TEX_PATH = @"C:\Program Files\MiKTeX 2.9\miktex\bin";
 
-        public Bitmap Render(Expression expression)
+        public Bitmap Render(Node node)
         {
             string tempPath = Path.GetTempPath();
             ProcessStartInfo si = new ProcessStartInfo(Path.Combine(TEX_PATH, "tex.exe"), "cas.tex");
@@ -22,7 +22,7 @@ namespace CAS
             si.UseShellExecute = false;
             si.RedirectStandardOutput = true;
             StreamWriter texWriter = File.CreateText(Path.Combine(tempPath, "cas.tex"));
-            string tex = @"\nopagenumbers$" + texString(expression) + @"$\end";
+            string tex = @"\nopagenumbers$" + texString(node) + @"$\end";
             texWriter.Write(tex);
             texWriter.Close();
 
@@ -49,15 +49,15 @@ namespace CAS
             return bitmap;
         }
 
-        string texString(Expression e)
+        string texString(Node node)
         {
             string ret = "";
-            switch(e.ExpressionType)
+            switch(node.NodeType)
             {
-                case Expression.Type.Plus:
+                case Node.Type.Plus:
                     {
                         bool first = true;
-                        foreach (Expression child in e.Children)
+                        foreach (Node child in node.Children)
                         {
                             if (!first)
                             {
@@ -69,32 +69,32 @@ namespace CAS
                     }
                     break;
 
-                case Expression.Type.Minus:
-                    ret = texString(e.Children[0]) + "-";
-                    if(e.Children[1].ExpressionType == Expression.Type.Plus || e.Children[1].ExpressionType == Expression.Type.Minus)
+                case Node.Type.Minus:
+                    ret = texString(node.Children[0]) + "-";
+                    if(node.Children[1].NodeType == Node.Type.Plus || node.Children[1].NodeType == Node.Type.Minus)
                     {
-                        ret += "(" + texString(e.Children[1]) + ")";
+                        ret += "(" + texString(node.Children[1]) + ")";
                     }
                     else
                     {
-                        ret += texString(e.Children[1]);
+                        ret += texString(node.Children[1]);
                     }
                     break;
 
-                case Expression.Type.Times:
+                case Node.Type.Times:
                     {
                         bool first = true;
-                        foreach (Expression child in e.Children)
+                        foreach (Node child in node.Children)
                         {
                             if (!first)
                             {
                                 ret += @"\cdot ";
                             }
 
-                            switch (child.ExpressionType)
+                            switch (child.NodeType)
                             {
-                                case Expression.Type.Plus:
-                                case Expression.Type.Minus:
+                                case Node.Type.Plus:
+                                case Node.Type.Minus:
                                     ret += "(" + texString(child) + ")";
                                     break;
 
@@ -107,37 +107,37 @@ namespace CAS
                         break;
                     }
 
-                case Expression.Type.Divide:
-                    ret = "{" + texString(e.Children[0]) + @"\over " + texString(e.Children[1]) + "}";
+                case Node.Type.Divide:
+                    ret = "{" + texString(node.Children[0]) + @"\over " + texString(node.Children[1]) + "}";
                     break;
 
-                case Expression.Type.Negative:
-                    if (e.Children[0].ExpressionType == Expression.Type.Plus || e.Children[0].ExpressionType == Expression.Type.Minus)
+                case Node.Type.Negative:
+                    if (node.Children[0].NodeType == Node.Type.Plus || node.Children[0].NodeType == Node.Type.Minus)
                     {
-                        ret = "-(" + texString(e.Children[0]) + ")";
+                        ret = "-(" + texString(node.Children[0]) + ")";
                     }
                     else
                     {
-                        ret = "-" + texString(e.Children[0]);
+                        ret = "-" + texString(node.Children[0]);
                     }
                     break;
 
-                case Expression.Type.Power:
-                    if (e.Children[0].ExpressionType == Expression.Type.Constant || e.Children[0].ExpressionType == Expression.Type.Variable)
+                case Node.Type.Power:
+                    if (node.Children[0].NodeType == Node.Type.Constant || node.Children[0].NodeType == Node.Type.Variable)
                     {
-                        ret = texString(e.Children[0]) + "^{" + texString(e.Children[1]) + "}";
+                        ret = texString(node.Children[0]) + "^{" + texString(node.Children[1]) + "}";
                     }
                     else
                     {
-                        ret = "(" + texString(e.Children[0]) + ")^{" + texString(e.Children[1]) + "}";
+                        ret = "(" + texString(node.Children[0]) + ")^{" + texString(node.Children[1]) + "}";
                     }
                     break;
 
-                case Expression.Type.Function:
+                case Node.Type.Function:
                     {
                         bool first = true;
-                        ret = @"{\rm " + (string)e.Data + "} (";
-                        foreach (Expression arg in e.Children)
+                        ret = @"{\rm " + (string)node.Data + "} (";
+                        foreach (Node arg in node.Children)
                         {
                             if (!first)
                             {
@@ -151,7 +151,7 @@ namespace CAS
                     }
 
                 default:
-                    ret = e.Data.ToString();
+                    ret = node.Data.ToString();
                     break;
             }
 

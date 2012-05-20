@@ -28,11 +28,11 @@ namespace CAS
             this.tokenizer = tokenizer;
         }
 
-        public Expression Parse()
+        public Node Parse()
         {
             try
             {
-                Expression e = GetExpression();
+                Node e = GetExpression();
                 if (tokenizer.Consume(Tokenizer.Token.Type.End, "<end>") == null)
                 {
                     Tokenizer.Token next = tokenizer.NextToken;
@@ -46,85 +46,85 @@ namespace CAS
             }
         }
 
-        Expression GetExpression()
+        Node GetExpression()
         {
-            Expression ret = GetTerm();
+            Node ret = GetTerm();
             while (tokenizer.NextToken.String == "+" || tokenizer.NextToken.String == "-")
             {
                 Tokenizer.Token token = tokenizer.Consume();
-                Expression.Type type;
+                Node.Type type;
 
                 if (token.String == "+")
                 {
-                    type = Expression.Type.Plus;
+                    type = Node.Type.Plus;
                 }
                 else
                 {
-                    type = Expression.Type.Minus;
+                    type = Node.Type.Minus;
                 }
 
-                Expression e = GetTerm();
-                ret = new Expression(type, ret, e);
+                Node e = GetTerm();
+                ret = new Node(type, ret, e);
             }
 
             return ret;
         }
 
-        Expression GetTerm()
+        Node GetTerm()
         {
-            Expression ret = GetFactor();
+            Node ret = GetFactor();
             while (tokenizer.NextToken.String == "*" || tokenizer.NextToken.String == "/")
             {
                 Tokenizer.Token token = tokenizer.Consume();
-                Expression.Type type;
+                Node.Type type;
 
                 if (token.String == "*")
                 {
-                    type = Expression.Type.Times;
+                    type = Node.Type.Times;
                 }
                 else
                 {
-                    type = Expression.Type.Divide;
+                    type = Node.Type.Divide;
                 }
 
-                Expression e = GetFactor();
-                ret = new Expression(type, ret, e);
+                Node e = GetFactor();
+                ret = new Node(type, ret, e);
             }
 
             return ret;
         }
 
-        Expression GetFactor()
+        Node GetFactor()
         {
-            Expression ret = GetAtom();
+            Node ret = GetAtom();
             if (tokenizer.NextToken.TokenType == Tokenizer.Token.Type.Symbol && tokenizer.NextToken.String == "^")
             {
                 tokenizer.Consume();
-                Expression exponent = GetFactor();
-                ret = new Expression(Expression.Type.Power, ret, exponent);
+                Node exponent = GetFactor();
+                ret = new Node(Node.Type.Power, ret, exponent);
             }
 
             return ret;
         }
 
-        Expression GetAtom()
+        Node GetAtom()
         {
             Tokenizer.Token token = tokenizer.Consume();
 
             switch (token.TokenType)
             {
                 case Tokenizer.Token.Type.Number:
-                    return new Expression(Expression.Type.Constant, Int32.Parse(token.String));
+                    return new Node(Node.Type.Constant, Int32.Parse(token.String));
 
                 case Tokenizer.Token.Type.Identifier:
                     {
                         if (tokenizer.NextToken.String == "(")
                         {
                             tokenizer.Consume();
-                            List<Expression> args = new List<Expression>();
+                            List<Node> args = new List<Node>();
                             while (tokenizer.NextToken.String != ")")
                             {
-                                Expression arg = GetExpression();
+                                Node arg = GetExpression();
                                 args.Add(arg);
 
                                 if (tokenizer.NextToken.String == ",")
@@ -138,23 +138,23 @@ namespace CAS
                             }
                             tokenizer.Consume();
 
-                            return new Expression(Expression.Type.Function, token.String, args.ToArray());
+                            return new Node(Node.Type.Function, token.String, args.ToArray());
                         }
                         else
                         {
-                            return new Expression(Expression.Type.Variable, token.String);
+                            return new Node(Node.Type.Variable, token.String);
                         }
                     }
                 case Tokenizer.Token.Type.Symbol:
                     if (token.String == "-")
                     {
-                        Expression e = GetFactor();
-                        return new Expression(Expression.Type.Negative, e);
+                        Node e = GetFactor();
+                        return new Node(Node.Type.Negative, e);
                     }
 
                     if (token.String == "(")
                     {
-                        Expression e = GetExpression();
+                        Node e = GetExpression();
                         token = tokenizer.Consume();
                         if (token.String != ")")
                         {
