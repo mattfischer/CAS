@@ -157,7 +157,7 @@ namespace CAS
                 treeViewer.AddNode(node, "Start");
                 queueNode(node, DisplayRegion.LeftRight.Left);
 
-                Node result = Evaluate.Eval(node, logReplace);
+                Node result = Simplify.Eval(node, logReplace);
                 if (!showIntermediates.Checked)
                 {
                     queueNode(result, DisplayRegion.LeftRight.Right);

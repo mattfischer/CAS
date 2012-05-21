@@ -46,8 +46,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Evaluate.cs" />
+    <Compile Include="BuiltinFunctions.cs" />
+    <Compile Include="Simplify.cs" />
     <Compile Include="Node.cs" />
+    <Compile Include="NodeUtils.cs" />
     <Compile Include="Polynomial.cs" />
     <Compile Include="Rational.cs" />
     <Compile Include="TreeViewer.cs">

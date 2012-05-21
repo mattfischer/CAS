@@ -121,6 +121,70 @@ namespace CAS
             return a;
         }
 
+        public static Polynomial FromNode(Node node)
+        {
+            Dictionary<int, Rational> coeffs = new Dictionary<int, Rational>();
+            Node variable = null;
+            foreach (Node term in NodeMath.terms(node))
+            {
+                Node[] coeffTerm = NodeMath.coefficientTerm(term);
+                Node coefficient = coeffTerm[0];
+                Node var = coeffTerm[1];
+                Node fact = NodeMath.factor(var);
+                Node exp = NodeMath.exponent(var);
+
+                if (!NodeMath.isConstant(coefficient) || !NodeMath.isConstant(exp))
+                {
+                    return null;
+                }
+
+                switch (fact.NodeType)
+                {
+                    case Node.Type.Variable:
+                        {
+                            if (variable != null && (string)variable.Data != (string)fact.Data)
+                            {
+                                return null;
+                            }
+                            else
+                            {
+                                variable = fact;
+                            }
+
+                            coeffs.Add((int)exp.Data, new Rational((int)coefficient.Data));
+                            break;
+                        }
+
+                    case Node.Type.Constant:
+                        {
+                            coeffs.Add(0, new Rational((int)coefficient.Data));
+                            break;
+                        }
+                }
+            }
+
+            Polynomial poly = new Polynomial(variable, coeffs);
+            return poly;
+        }
+
+        public Node ToNode()
+        {
+            Node ret = NodeMath.constant(0);
+            for (int i = 0; i < Degree + 1; i++)
+            {
+                if (i == 0)
+                {
+                    ret = NodeMath.add(ret, NodeMath.constant(Coefficients[i]));
+                }
+                else
+                {
+                    ret = NodeMath.add(ret, NodeMath.multiply(NodeMath.constant(Coefficients[i]), NodeMath.power(Variable, NodeMath.constant(i))));
+                }
+            }
+
+            return ret;
+        }
+
         Rational[] coefficients;
         Node variable;
     }
