@@ -36,31 +36,6 @@ namespace CAS
             }
         }
 
-        public Polynomial(Node variable, Dictionary<int, Rational> coefficients)
-        {
-            this.variable = variable;
-            int degree = -1;
-            foreach (int exp in coefficients.Keys)
-            {
-                if (coefficients[exp] != new Rational(0))
-                {
-                    degree = Math.Max(degree, exp);
-                }
-            }
-            this.coefficients = new Rational[degree + 1];
-            for (int i = 0; i <= degree; i++)
-            {
-                if (coefficients.ContainsKey(i))
-                {
-                    this.coefficients[i] = coefficients[i];
-                }
-                else
-                {
-                    this.coefficients[i] = new Rational(0);
-                }
-            }
-        }
-
         public Rational[] Coefficients
         {
             get { return coefficients; }
@@ -82,7 +57,7 @@ namespace CAS
             Polynomial remainder;
             if (divisor.Degree > dividend.Degree)
             {
-                quotient = new Polynomial(dividend.Variable, new Rational[] { new Rational(0) });
+                quotient = new Polynomial(new Rational(0));
                 remainder = dividend;
                 return new Polynomial[] { quotient, remainder };
             }
@@ -110,7 +85,7 @@ namespace CAS
 
         public static Polynomial gcd(Polynomial a, Polynomial b)
         {
-            while (b.Degree > 0 || b.coefficients[0] != new Rational(0))
+            while (!b.Equals(new Rational(0)))
             {
                 Polynomial t = b;
                 Polynomial[] result = divide(a, b);
@@ -125,6 +100,7 @@ namespace CAS
         {
             Dictionary<int, Rational> coeffs = new Dictionary<int, Rational>();
             Node variable = null;
+            int degree = -1;
             foreach (Node term in NodeMath.terms(node))
             {
                 Node[] coeffTerm = NodeMath.coefficientTerm(term);
@@ -137,6 +113,8 @@ namespace CAS
                 {
                     return null;
                 }
+
+                degree = Math.Max(degree, NodeMath.constantValue(exp));
 
                 switch (fact.NodeType)
                 {
@@ -151,19 +129,32 @@ namespace CAS
                                 variable = fact;
                             }
 
-                            coeffs.Add((int)exp.Data, new Rational((int)coefficient.Data));
+                            coeffs.Add(NodeMath.constantValue(exp), new Rational((int)coefficient.Data));
                             break;
                         }
 
                     case Node.Type.Constant:
                         {
-                            coeffs.Add(0, new Rational((int)coefficient.Data));
+                            coeffs.Add(0, new Rational(NodeMath.constantValue(coefficient)));
                             break;
                         }
                 }
             }
 
-            Polynomial poly = new Polynomial(variable, coeffs);
+            Rational[] coefficients = new Rational[degree + 1];
+            for (int i = 0; i <= degree; i++)
+            {
+                if (coeffs.ContainsKey(i))
+                {
+                    coefficients[i] = coeffs[i];
+                }
+                else
+                {
+                    coefficients[i] = new Rational(0);
+                }
+            }
+
+            Polynomial poly = new Polynomial(variable, coefficients);
             return poly;
         }
 
@@ -180,6 +171,60 @@ namespace CAS
                 {
                     ret = NodeMath.add(ret, NodeMath.multiply(NodeMath.constant(Coefficients[i]), NodeMath.power(Variable, NodeMath.constant(i))));
                 }
+            }
+
+            return ret;
+        }
+
+        public override bool Equals(object obj)
+        {
+            Polynomial poly;
+            if (obj.GetType() == typeof(Rational))
+            {
+                poly = new Polynomial((Rational)obj);
+            }
+            else if (obj.GetType() == typeof(Polynomial))
+            {
+                poly = (Polynomial)obj;
+            }
+            else
+            {
+                return false;
+            }
+
+            if (variable != null && poly.variable != null && variable != poly.variable)
+            {
+                return false;
+            }
+
+            if (coefficients.Length != poly.coefficients.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < coefficients.Length; i++)
+            {
+                if (coefficients[i] != poly.coefficients[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            int ret = 0;
+
+            if(variable != null)
+            {
+                ret ^= variable.GetHashCode();
+            }
+
+            foreach (Rational coefficient in coefficients)
+            {
+                ret ^= coefficient.GetHashCode();
             }
 
             return ret;

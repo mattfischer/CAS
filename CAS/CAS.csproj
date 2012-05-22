@@ -49,7 +49,7 @@
     <Compile Include="BuiltinFunctions.cs" />
     <Compile Include="Simplify.cs" />
     <Compile Include="Node.cs" />
-    <Compile Include="NodeUtils.cs" />
+    <Compile Include="NodeMath.cs" />
     <Compile Include="Polynomial.cs" />
     <Compile Include="Rational.cs" />
     <Compile Include="TreeViewer.cs">
